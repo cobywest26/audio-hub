@@ -4,12 +4,14 @@ AudioHub is our senior capstone project and a social Spotify data analytics app 
 
 ## Project Structure
 
+```text
 audiohub/
 ├── apps/
 │   ├── web/        # Next.js frontend
 │   └── api/        # FastAPI backend
 ├── supabase/       # Database, auth, and storage configuration
 └── README.md
+```
 
 ## Prerequisites
 
