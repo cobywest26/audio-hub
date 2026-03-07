@@ -1,0 +1,14 @@
+# Node
+node_modules/
+.next/
+
+# Python
+.venv/
+__pycache__/
+
+# Environment variables
+.env
+.env.local
+
+# Supabase temp files
+supabase/.temp/
