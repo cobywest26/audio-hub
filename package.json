@@ -1,0 +1,17 @@
+{
+  "name": "audio-hub",
+  "private": true,
+  "scripts": {
+    "dev:web": "cd apps/web && npm run dev",
+    "dev:supabase": "supabase start",
+    "dev": "concurrently -n WEB,DB \"npm run dev:web\" \"npm run dev:supabase\"",
+    "build:web": "cd apps/web && npm run build",
+    "lint:web": "cd apps/web && npm run lint",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "supabase": "^2.77.0"
+  }
+}
