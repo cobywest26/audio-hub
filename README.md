@@ -38,10 +38,7 @@ From the project root, run
 npm run dev
 ```
 
-This starts the frontend and local Supabase dev services. You can view the frontend at
-```bash
-http://localhost:3000
-```
+This starts the frontend and local Supabase dev services. You can view the frontend at http://localhost:3000
 
 ## Backend Setup
 ```bash
