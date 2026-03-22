@@ -24,5 +24,4 @@ def parse_spotify_entry(entry: dict[str, Any], user_id: str, upload_id: str) -> 
         "ms_played": entry.get("ms_played", 0) or 0,
         "conn_country": entry.get("conn_country"),
         "platform": entry.get("platform"),
-        "raw_json": entry,
     }
