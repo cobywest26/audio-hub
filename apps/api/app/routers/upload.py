@@ -2,11 +2,12 @@ import json
 import zipfile
 from io import BytesIO
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
-from app.core.supabase_client import supabase
-from app.utils.metrics import compute_metrics
+from app.core.auth import get_current_user_id
+from app.core.supabase_client import LISTENING_HISTORY_CONFLICT_COLUMNS, supabase
+from app.utils.metrics import compute_and_upsert_lifetime_metrics
 from app.utils.spotify_parser import parse_spotify_entry
 
 router = APIRouter(prefix="/upload", tags=["upload"])
@@ -25,6 +26,7 @@ class UploadResponse(BaseModel):
     message: str
     upload_id: str
     records_imported: int
+    duplicate_records_ignored: int
     metrics: MetricsResponse
 
 # JSON loading function assited by ChatGPT
@@ -54,11 +56,57 @@ def load_json_records(file_bytes: bytes, filename: str) -> list[dict]:
 
     raise ValueError("Only .json and .zip files are supported.")
 
+
+def _row_dedup_key(row: dict) -> tuple:
+    return (
+        row.get("user_id"),
+        row.get("played_at"),
+        row.get("spotify_track_uri"),
+        row.get("track_name"),
+        row.get("artist_name"),
+        row.get("album_name"),
+        row.get("ms_played"),
+        row.get("platform"),
+    )
+
+
+def deduplicate_rows(rows: list[dict]) -> tuple[list[dict], int]:
+    deduped_rows: list[dict] = []
+    seen: set[tuple] = set()
+    duplicate_count = 0
+
+    for row in rows:
+        key = _row_dedup_key(row)
+        if key in seen:
+            duplicate_count += 1
+            continue
+
+        seen.add(key)
+        deduped_rows.append(row)
+
+    return deduped_rows, duplicate_count
+
+
+def insert_history_batch(rows: list[dict]) -> None:
+    if LISTENING_HISTORY_CONFLICT_COLUMNS:
+        (
+            supabase.table("listening_history")
+            .upsert(
+                rows,
+                on_conflict=LISTENING_HISTORY_CONFLICT_COLUMNS,
+                ignore_duplicates=True,
+            )
+            .execute()
+        )
+        return
+
+    supabase.table("listening_history").insert(rows).execute()
+
 # API POST for Spotify data uploads
 @router.post("/", response_model=UploadResponse)
 async def upload_spotify_file(
     file: UploadFile = File(...),
-    user_id: str = Form(...)
+    user_id: str = Depends(get_current_user_id),
 ):
     filename = file.filename or "unknown"
 
@@ -86,25 +134,16 @@ async def upload_spotify_file(
             for entry in raw_records
             if isinstance(entry, dict)
         ]
-        
-        # TEMPORARY: limit size for testing
-        parsed_rows = parsed_rows[:200]
-
-        print(f"Parsed {len(parsed_rows)} rows")
-
-        parsed_rows = parsed_rows[:1000]
+        parsed_rows, duplicates_ignored = deduplicate_rows(parsed_rows)
 
         if parsed_rows:
             batch_size = 100
 
             for i in range(0, len(parsed_rows), batch_size):
                 batch = parsed_rows[i:i + batch_size]
-                print(f"Inserting batch {i} to {i + len(batch) - 1}")
-                supabase.table("listening_history").insert(batch).execute()
+                insert_history_batch(batch)
 
-        metrics = compute_metrics(parsed_rows, user_id)
-
-        supabase.table("user_metrics").upsert(metrics).execute()
+        metrics = compute_and_upsert_lifetime_metrics(user_id)
 
         supabase.table("uploads").update({
             "status": "processed",
@@ -116,6 +155,7 @@ async def upload_spotify_file(
             "message": "Upload processed successfully.",
             "upload_id": upload_id,
             "records_imported": len(parsed_rows),
+            "duplicate_records_ignored": duplicates_ignored,
             "metrics": metrics,
         }
 

@@ -14,3 +14,4 @@ app.add_middleware(
 
 app.include_router(upload.router)
 app.include_router(metrics.router)
+app.include_router(health.router)

@@ -1,5 +1,7 @@
 from collections import Counter
 
+from app.core.supabase_client import supabase
+
 # Calculates basic metrics for uploaded data
 def compute_metrics(rows: list[dict], user_id: str) -> dict:
     total_streams = len(rows)
@@ -23,3 +25,34 @@ def compute_metrics(rows: list[dict], user_id: str) -> dict:
         "top_track": top_track[0][0] if top_track else None,
         "top_artist": top_artist[0][0] if top_artist else None,
     }
+
+
+def _fetch_history_rows_for_user(user_id: str, page_size: int = 1000) -> list[dict]:
+    rows: list[dict] = []
+    start = 0
+
+    while True:
+        result = (
+            supabase.table("listening_history")
+            .select("ms_played,track_name,artist_name")
+            .eq("user_id", user_id)
+            .range(start, start + page_size - 1)
+            .execute()
+        )
+
+        batch = result.data or []
+        rows.extend(batch)
+
+        if len(batch) < page_size:
+            break
+
+        start += page_size
+
+    return rows
+
+
+def compute_and_upsert_lifetime_metrics(user_id: str) -> dict:
+    all_rows = _fetch_history_rows_for_user(user_id)
+    metrics = compute_metrics(all_rows, user_id)
+    supabase.table("user_metrics").upsert(metrics, on_conflict="user_id").execute()
+    return metrics
