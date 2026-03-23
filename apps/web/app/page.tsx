@@ -1,3 +1,33 @@
+import Link from "next/link";
+
+export default function HomePage() {
+  return (
+    <main className="min-h-screen bg-zinc-950 text-white">
+      <div className="mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center px-6 text-center">
+        <p className="mb-3 text-sm uppercase tracking-[0.2em] text-zinc-400">
+          AudioHub
+        </p>
+        <h1 className="text-5xl font-bold tracking-tight">
+          Spotify data, minus the guesswork
+        </h1>
+        <p className="mt-4 max-w-2xl text-zinc-300">
+          Upload your Spotify listening history and explore your personal stats,
+          trends, and community insights.
+        </p>
+
+        <div className="mt-8 flex gap-4">
+          <Link
+            href="/login"
+            className="rounded-xl bg-white px-5 py-3 font-medium text-zinc-950"
+          >
+            Get Started
+          </Link>
+        </div>
+      </div>
+    </main>
+  );
+}
+
 // Placeholder page
 
 /*"use client";
