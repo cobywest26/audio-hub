@@ -8,7 +8,7 @@ export default function HomePage() {
           AudioHub
         </p>
         <h1 className="text-5xl font-bold tracking-tight">
-          Spotify data, minus the guesswork
+          What does your Spotify history say about You?
         </h1>
         <p className="mt-4 max-w-2xl text-zinc-300">
           Upload your Spotify listening history and explore your personal stats,

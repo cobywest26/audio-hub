@@ -24,8 +24,8 @@ export async function uploadSpotifyData(
   return data;
 }
 
-export async function getMyMetrics(userId: string, accessToken: string) {
-  const response = await fetch(`${API_BASE_URL}/metrics/${userId}`, {
+export async function getMyMetrics(accessToken: string) {
+  const response = await fetch(`${API_BASE_URL}/metrics/me`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },

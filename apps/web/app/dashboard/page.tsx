@@ -39,7 +39,17 @@ export default function DashboardPage() {
       }
 
       try {
-        const data = await getMyMetrics(user.id);
+        // Fetching session state
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.access_token) {
+          throw new Error("No active session found.");
+        }
+
+        // Calls user metrics with the session token
+        const data = await getMyMetrics(session.access_token);
         setMetrics(data);
       } catch (error) {
         console.error(error);
