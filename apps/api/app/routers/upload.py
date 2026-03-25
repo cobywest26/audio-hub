@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from app.core.auth import get_current_user_id
 from app.core.supabase_client import LISTENING_HISTORY_CONFLICT_COLUMNS, supabase
-from app.utils.metrics import compute_and_upsert_lifetime_metrics
+from app.utils.metrics import compute_and_save_snapshot_metrics
 from app.utils.spotify_parser import parse_spotify_entry
 
 router = APIRouter(prefix="/upload", tags=["upload"])
@@ -29,7 +29,7 @@ class UploadResponse(BaseModel):
     duplicate_records_ignored: int
     metrics: MetricsResponse
 
-# JSON loading function assited by ChatGPT
+# JSON loading function assisted by ChatGPT
 def load_json_records(file_bytes: bytes, filename: str) -> list[dict]:
     if filename.endswith(".json"):
         try:
@@ -125,12 +125,25 @@ async def upload_spotify_file(
 
     upload_id = upload_insert.data[0]["id"]
 
+    snapshot_insert = supabase.table("snapshots").insert({
+        "user_id": user_id,
+        "upload_id": upload_id,
+        "name": filename,
+        "status": "processing",
+        "is_active": True,
+    }).execute()
+
+    if not snapshot_insert.data:
+        raise HTTPException(status_code=500, detail="Failed to create snapshot record.")
+
+    snapshot_id = snapshot_insert.data[0]["id"]
+
     try:
         file_bytes = await file.read()
         raw_records = load_json_records(file_bytes, filename)
 
         parsed_rows = [
-            parse_spotify_entry(entry, user_id=user_id, upload_id=upload_id)
+            parse_spotify_entry(entry, user_id=user_id, upload_id=upload_id, snapshot_id=snapshot_id)
             for entry in raw_records
             if isinstance(entry, dict)
         ]
@@ -143,7 +156,7 @@ async def upload_spotify_file(
                 batch = parsed_rows[i:i + batch_size]
                 insert_history_batch(batch)
 
-        metrics = compute_and_upsert_lifetime_metrics(user_id)
+        metrics = compute_and_save_snapshot_metrics(user_id, snapshot_id)
 
         supabase.table("uploads").update({
             "status": "processed",
@@ -151,9 +164,14 @@ async def upload_spotify_file(
             "error_message": None,
         }).eq("id", upload_id).execute()
 
+        supabase.table("snapshots").update({
+            "status": "ready",
+        }).eq("id", snapshot_id).execute()
+
         return {
             "message": "Upload processed successfully.",
             "upload_id": upload_id,
+            "snapshot_id": snapshot_id,
             "records_imported": len(parsed_rows),
             "duplicate_records_ignored": duplicates_ignored,
             "metrics": metrics,
@@ -164,5 +182,9 @@ async def upload_spotify_file(
             "status": "failed",
             "error_message": str(e),
         }).eq("id", upload_id).execute()
+
+        supabase.table("snapshots").update({
+            "status": "failed",
+        }).eq("id", snapshot_id).execute()
 
         raise HTTPException(status_code=500, detail=f"Upload failed: {e}")

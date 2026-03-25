@@ -24,8 +24,8 @@ export async function uploadSpotifyData(
   return data;
 }
 
-export async function getMyMetrics(accessToken: string) {
-  const response = await fetch(`${API_BASE_URL}/metrics/me`, {
+export async function getLatestMetrics(accessToken: string) {
+  const response = await fetch(`${API_BASE_URL}/metrics/latest`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -34,8 +34,41 @@ export async function getMyMetrics(accessToken: string) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.detail || "Failed to fetch metrics.");
+    throw new Error(data.detail || "Failed to fetch latest metrics.");
   }
 
   return data;
+}
+
+export async function getSnapshots(accessToken: string) {
+  const response = await fetch(`${API_BASE_URL}/metrics/snapshots`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.detail || "Failed to fetch snapshots.");
+  }
+
+  return data;
+}
+
+export async function resetForNewSnapshot(accessToken: string) {
+    const response = await fetch(`${API_BASE_URL}/metrics/reset`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+        },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.detail || "Failed to prepare for new snapshot.");
+    }
+
+    return data;
 }
