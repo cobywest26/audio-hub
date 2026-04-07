@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from app.core.auth import get_current_user_id
 from app.core.supabase_client import supabase
+from app.utils.metrics import compute_and_save_snapshot_metrics
 
 router = APIRouter(prefix="/metrics", tags=["metrics"])
 
@@ -8,25 +9,41 @@ print("LOADED NEW METRICS ROUTER")
 
 @router.get("/me")
 def get_user_metrics(user_id: str = Depends(get_current_user_id)):
-    result = (
-        supabase.table("user_metric")
-        .select("*")
-        .eq("user_id", user_id)
-        .limit(1)
-        .execute()
-    )
+    empty_metrics = {
+        "total_streams": 0,
+        "total_ms_played": 0,
+        "unique_tracks": 0,
+        "unique_artists": 0,
+        "top_track": None,
+        "top_artist": None,
+    }
+
+    try:
+        result = (
+            supabase.table("user_metric")
+            .select("*")
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        return empty_metrics
 
     if not result.data:
+        return empty_metrics
+
+    metrics = result.data[0]
+
+    if not any(
+        metrics.get(key)
+        for key in ("total_streams", "total_ms_played", "unique_tracks", "unique_artists")
+    ):
         return {
-            "total_streams": 0,
-            "total_ms_played": 0,
-            "unique_tracks": 0,
-            "unique_artists": 0,
-            "top_track": None,
-            "top_artist": None,
+            **empty_metrics,
+            "user_id": metrics.get("user_id"),
         }
 
-    return result.data[0]
+    return metrics
 
 
 @router.get("/latest")
@@ -58,10 +75,15 @@ def get_latest_snapshot_metrics(user_id: str = Depends(get_current_user_id)):
         .execute()
     )
 
+    metrics = metrics_result.data[0] if metrics_result.data else None
+
+    if metrics is None:
+        metrics = compute_and_save_snapshot_metrics(user_id, snapshot["id"])
+
     return {
         "has_data": True,
         "snapshot": snapshot,
-        "metrics": metrics_result.data[0] if metrics_result.data else None,
+        "metrics": metrics,
     }
 
 
