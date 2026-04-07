@@ -1,5 +1,7 @@
 import json
+import logging
 import zipfile
+import traceback
 from io import BytesIO
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -7,10 +9,11 @@ from pydantic import BaseModel
 
 from app.core.auth import get_current_user_id
 from app.core.supabase_client import LISTENING_HISTORY_CONFLICT_COLUMNS, supabase
-from app.utils.metrics import compute_and_save_snapshot_metrics
+from app.utils.metrics import compute_and_save_snapshot_metrics, compute_and_save_user_metrics
 from app.utils.spotify_parser import parse_spotify_entry
 
 router = APIRouter(prefix="/upload", tags=["upload"])
+logger = logging.getLogger(__name__)
 
 # Defined response class structures
 class MetricsResponse(BaseModel):
@@ -25,6 +28,7 @@ class MetricsResponse(BaseModel):
 class UploadResponse(BaseModel):
     message: str
     upload_id: str
+    snapshot_id: str
     records_imported: int
     duplicate_records_ignored: int
     metrics: MetricsResponse
@@ -113,6 +117,8 @@ async def upload_spotify_file(
     if not (filename.endswith(".json") or filename.endswith(".zip")):
         raise HTTPException(status_code=400, detail="Only .json and .zip files are allowed.")
 
+    logger.info("Starting Spotify upload for user %s with file %s", user_id, filename)
+
     upload_insert = supabase.table("uploads").insert({
         "user_id": user_id,
         "filename": filename,
@@ -141,6 +147,7 @@ async def upload_spotify_file(
     try:
         file_bytes = await file.read()
         raw_records = load_json_records(file_bytes, filename)
+        logger.info("Loaded %s raw Spotify records for upload %s", len(raw_records), upload_id)
 
         parsed_rows = [
             parse_spotify_entry(entry, user_id=user_id, upload_id=upload_id, snapshot_id=snapshot_id)
@@ -148,6 +155,12 @@ async def upload_spotify_file(
             if isinstance(entry, dict)
         ]
         parsed_rows, duplicates_ignored = deduplicate_rows(parsed_rows)
+        logger.info(
+            "Prepared %s parsed rows for snapshot %s (%s duplicates ignored)",
+            len(parsed_rows),
+            snapshot_id,
+            duplicates_ignored,
+        )
 
         if parsed_rows:
             batch_size = 100
@@ -155,8 +168,20 @@ async def upload_spotify_file(
             for i in range(0, len(parsed_rows), batch_size):
                 batch = parsed_rows[i:i + batch_size]
                 insert_history_batch(batch)
+            logger.info("Inserted listening history for snapshot %s", snapshot_id)
 
         metrics = compute_and_save_snapshot_metrics(user_id, snapshot_id)
+        logger.info("Saved snapshot metrics for snapshot %s", snapshot_id)
+
+        try:
+            compute_and_save_user_metrics(user_id)
+            logger.info("Saved profile metrics for user %s", user_id)
+        except Exception:
+            logger.exception(
+                "Profile metric refresh failed for user %s after snapshot %s",
+                user_id,
+                snapshot_id,
+            )
 
         supabase.table("uploads").update({
             "status": "processed",
@@ -178,6 +203,14 @@ async def upload_spotify_file(
         }
 
     except Exception as e:
+        logger.error(
+            "Upload failed for user %s, upload %s, snapshot %s: %s\n%s",
+            user_id,
+            upload_id,
+            snapshot_id,
+            e,
+            traceback.format_exc(),
+        )
         supabase.table("uploads").update({
             "status": "failed",
             "error_message": str(e),
