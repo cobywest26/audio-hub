@@ -60,13 +60,22 @@ export default function DashboardPage() {
       }
 
       try {
-        const [latestData, snapshotList] = await Promise.all([
+        const [latestResult, snapshotResult] = await Promise.allSettled([
           getLatestMetrics(session.access_token),
           getSnapshots(session.access_token),
         ]);
 
-        setLatest(latestData);
-        setSnapshots(snapshotList);
+        if (latestResult.status === "fulfilled") {
+          setLatest(latestResult.value);
+        } else {
+          console.error("Failed to load latest metrics:", latestResult.reason);
+        }
+
+        if (snapshotResult.status === "fulfilled") {
+          setSnapshots(snapshotResult.value);
+        } else {
+          console.error("Failed to load snapshots:", snapshotResult.reason);
+        }
       } catch (error) {
         console.error("Failed to load dashboard:", error);
       } finally {
@@ -169,7 +178,20 @@ export default function DashboardPage() {
             </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mb-10 rounded-2xl bg-white p-6 shadow-sm">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold">Your Profile</h2>
+              <p className="mt-1 text-sm text-zinc-600">
+                Based on your most recent Spotify history upload.
+              </p>
+            </div>
+            <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium uppercase tracking-wide text-zinc-600">
+              Current Snapshot
+            </span>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <MetricCard
             label="Total Streams"
             value={metrics.total_streams.toLocaleString()}
@@ -189,9 +211,10 @@ export default function DashboardPage() {
           <MetricCard label="Top Track" value={metrics.top_track ?? "N/A"} />
           <MetricCard label="Top Artist" value={metrics.top_artist ?? "N/A"} />
         </div>
+        </div>
 
-        <div className="mt-10 rounded-2xl bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold">Snapshot History</h2>
+        <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-semibold">Upload History</h2>
           <div className="mt-4 space-y-3">
             {snapshots.length === 0 ? (
               <p className="text-sm text-zinc-600">No snapshots found.</p>

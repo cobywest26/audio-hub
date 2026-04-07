@@ -2,8 +2,9 @@ from collections import Counter
 
 from app.core.supabase_client import supabase
 
+
 # Calculates basic metrics for uploaded data
-def compute_metrics(rows: list[dict], user_id: str, snapshot_id:str) -> dict:
+def compute_metrics(rows: list[dict], user_id: str, snapshot_id: str | None) -> dict:
     total_streams = len(rows)
     total_ms_played = sum(row.get("ms_played", 0) or 0 for row in rows)
 
@@ -27,14 +28,59 @@ def compute_metrics(rows: list[dict], user_id: str, snapshot_id:str) -> dict:
         "top_artist": top_artist[0][0] if top_artist else None,
     }
 
+
+def fetch_snapshot_metric_rows(user_id: str, snapshot_id: str, page_size: int = 1000) -> list[dict]:
+    rows: list[dict] = []
+    start = 0
+
+    while True:
+        # Supabase can return large result sets in pages, so fetch until
+        # the snapshot's full listening history has been read.
+        page = (
+            supabase.table("listening_history")
+            .select("ms_played,track_name,artist_name")
+            .eq("user_id", user_id)
+            .eq("snapshot_id", snapshot_id)
+            .range(start, start + page_size - 1)
+            .execute()
+        ).data or []
+
+        rows.extend(page)
+
+        if len(page) < page_size:
+            break
+
+        start += page_size
+
+    return rows
+
+
+def fetch_user_metric_rows(user_id: str, page_size: int = 1000) -> list[dict]:
+    rows: list[dict] = []
+    start = 0
+
+    while True:
+        page = (
+            supabase.table("listening_history")
+            .select("ms_played,track_name,artist_name")
+            .eq("user_id", user_id)
+            .range(start, start + page_size - 1)
+            .execute()
+        ).data or []
+
+        rows.extend(page)
+
+        if len(page) < page_size:
+            break
+
+        start += page_size
+
+    return rows
+
+
 def compute_and_save_snapshot_metrics(user_id: str, snapshot_id: str) -> dict:
-    rows = (
-        supabase.table("listening_history")
-        .select("ms_played,track_name,artist_name")
-        .eq("user_id", user_id)
-        .eq("snapshot_id", snapshot_id)
-        .execute()
-    ).data or []
+    # Read every row for the snapshot before computing metrics
+    rows = fetch_snapshot_metric_rows(user_id, snapshot_id)
 
     metrics = compute_metrics(rows, user_id, snapshot_id)
     supabase.table("snapshot_metric").upsert(
@@ -44,13 +90,15 @@ def compute_and_save_snapshot_metrics(user_id: str, snapshot_id: str) -> dict:
     return metrics
 
 
-# def compute_and_upsert_lifetime_metrics(user_id: str) -> dict:
-#     all_rows = _fetch_history_rows_for_user(user_id)
-#     metrics = compute_metrics(all_rows, user_id)
-#    supabase.table("user_metrics").upsert(metrics, on_conflict="user_id").execute()
-#     return metrics
+def compute_and_save_user_metrics(user_id: str) -> dict:
+    rows = fetch_user_metric_rows(user_id)
+    metrics = compute_metrics(rows, user_id, snapshot_id=None)
+    metrics.pop("snapshot_id", None)
 
-
-
+    supabase.table("user_metric").upsert(
+        metrics,
+        on_conflict="user_id",
+    ).execute()
+    return metrics
 
 

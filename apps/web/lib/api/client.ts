@@ -40,6 +40,22 @@ export async function getLatestMetrics(accessToken: string) {
   return data;
 }
 
+export async function getProfileMetrics(accessToken: string) {
+  const response = await fetch(`${API_BASE_URL}/metrics/me`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.detail || "Failed to fetch profile metrics.");
+  }
+
+  return data;
+}
+
 export async function getSnapshots(accessToken: string) {
   const response = await fetch(`${API_BASE_URL}/metrics/snapshots`, {
     headers: {

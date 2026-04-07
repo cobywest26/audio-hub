@@ -7,7 +7,6 @@ import { uploadSpotifyData } from "@/lib/api/client";
 
 export default function UploadPage() {
   const router = useRouter();
-  const [userId, setUserId] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -23,8 +22,6 @@ export default function UploadPage() {
         router.push("/login");
         return;
       }
-
-      setUserId(user.id);
     }
 
     loadUser();
@@ -70,21 +67,30 @@ export default function UploadPage() {
       <div className="mx-auto max-w-2xl rounded-2xl bg-white p-8 shadow-sm">
         <h1 className="text-3xl font-bold">Upload your Spotify data</h1>
         <p className="mt-2 text-sm text-zinc-600">
-          Upload your Spotify extended streaming history file to generate your
+          Upload your Spotify extended streaming history file to generate/update your
           profile.
         </p>
 
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-          <input
-            type="file"
-            accept=".json,.zip"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="rounded-xl border border-zinc-300 px-4 py-3"
-          />
+          <div className="flex flex-col gap-3">
+            <label
+              htmlFor="spotify-upload"
+              className="inline-flex w-fit cursor-pointer rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm font-medium text-zinc-900 transition hover:bg-zinc-50"
+            >
+              Choose File
+            </label>
+            <input
+              id="spotify-upload"
+              type="file"
+              accept=".json,.zip"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="hidden"
+            />
 
-          {file && (
-            <p className="text-sm text-zinc-600">Selected: {file.name}</p>
-          )}
+            <div className="rounded-xl border border-zinc-300 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+              {file ? `Selected: ${file.name}` : "No file selected"}
+            </div>
+          </div>
 
           <button
             type="submit"
