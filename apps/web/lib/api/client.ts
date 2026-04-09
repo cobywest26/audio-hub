@@ -88,3 +88,29 @@ export async function resetForNewSnapshot(accessToken: string) {
 
     return data;
 }
+
+export async function renameSnapshot(
+  accessToken: string,
+  snapshotId: string,
+  name: string
+) {
+  const response = await fetch(
+    `${API_BASE_URL}/metrics/snapshots/${snapshotId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ name }),
+    }
+  );
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(data?.detail || data?.message || "Failed to rename snapshot");
+  }
+
+  return data;
+}

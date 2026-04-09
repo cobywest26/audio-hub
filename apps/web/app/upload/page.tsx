@@ -1,5 +1,85 @@
 "use client";
 
+import Image from "next/image";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { uploadSpotifyData } from "@/lib/api/client";
+
+export default function UploadPage() {
+  const router = useRouter();
+  const [uploading, setUploading] = useState(false);
+  const [fileName, setFileName] = useState("");
+  const [error, setError] = useState("");
+
+  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const selected = event.target.files?.[0] ?? null;
+    if (!selected) return;
+
+    setFileName(selected.name);
+    setError("");
+
+    try {
+      setUploading(true);
+      router.push("/processing");
+
+      const supabase = getSupabaseBrowserClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        throw new Error("No active session found.");
+      }
+
+      await uploadSpotifyData(selected, session.access_token);
+      router.push("/dashboard");
+    } catch (err) {
+      console.error("UPLOAD FAILED:", err);
+      setUploading(false);
+      router.push("/upload");
+      setError(err instanceof Error ? err.message : "Upload failed.");
+    }
+  }
+
+  return (
+    <main className="audiohub-page">
+      <div className="audiohub-stage audiohub-stage--center">
+        <div className="audiohub-center-card">
+          <Image
+            src="/audiohub-logo.png"
+            alt="AudioHub"
+            width={62}
+            height={62}
+            className="audiohub-logo-large"
+          />
+          <h1 className="audiohub-welcome">Welcome to AudioHub!</h1>
+          <p className="audiohub-upload-label">Upload Streaming Data</p>
+
+          <label className="audiohub-upload-button">
+            ↑
+            <input
+              className="audiohub-hidden-input"
+              type="file"
+              accept=".json,.zip"
+              onChange={handleFileChange}
+              disabled={uploading}
+            />
+          </label>
+
+          {fileName ? (
+            <p className="audiohub-helper">Selected: {fileName}</p>
+          ) : null}
+
+          {error ? <p className="audiohub-helper">{error}</p> : null}
+        </div>
+      </div>
+    </main>
+  );
+}
+
+/*"use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -109,4 +189,4 @@ export default function UploadPage() {
       </div>
     </main>
   );
-}
+}*/

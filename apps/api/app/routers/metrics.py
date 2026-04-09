@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from app.core.auth import get_current_user_id
 from app.core.supabase_client import supabase
 from app.utils.metrics import compute_and_save_snapshot_metrics
@@ -103,4 +104,31 @@ def list_snapshots(user_id: str = Depends(get_current_user_id)):
 def reset_for_new_snapshot(user_id: str = Depends(get_current_user_id)):
     return {
         "message": "Ready for a new upload. Previous snapshots remain available for comparison."
+    }
+
+class RenameSnapshotRequest(BaseModel):
+    name: str
+
+@router.patch("/snapshots/{snapshot_id}")
+def rename_snapshot(
+    snapshot_id: str,
+    payload: RenameSnapshotRequest,
+    user_id: str = Depends(get_current_user_id),
+):
+    new_name = payload.name.strip()
+
+    if not new_name:
+        raise HTTPException(status_code=400, detail="Snapshot name cannot be empty")
+
+    result = (
+        supabase.table("snapshots")
+        .update({"name": new_name})
+        .eq("id", snapshot_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+
+    return {
+        "message": "Snapshot renamed successfully",
+        "snapshot": result.data[0] if result.data else None,
     }

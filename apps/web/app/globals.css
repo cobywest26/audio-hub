@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #050505;
+  --foreground: #f5f5f5;
+  --panel: #0d0d0f;
+  --panel-2: #111214;
+  --line: #3f4248;
+  --line-soft: #232428;
+  --blue: #34a0ff;
+  --green: #22c55e;
 }
 
 @theme inline {
@@ -12,15 +18,1032 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+  min-width: 0;
 }
 
+html,
 body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  height: auto;
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+body {
+  background: #030303;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.audiohub-page {
+  margin: 0;
+  padding: 0;
+  position: relative;
+  min-height: 100vh;
+  height: auto;
+  width: 100%;
+  background:
+    linear-gradient(
+      160deg,
+      #020202 0%,
+      #060606 30%,
+      #0b0b0d 68%,
+      #232428 100%
+    );
+  color: #f4f4f4;
+  overflow: visible;
+}
+
+.audiohub-stage {
+  width: min(100%, 1500px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 0;
+  background: transparent;
+}
+
+.audiohub-stage--center {
+  min-height: calc(100vh - 48px);
+  display: grid;
+  place-items: center;
+}
+
+.audiohub-stage--full {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  height: auto;
+  overflow: visible;
+}
+
+.audiohub-center-card {
+  width: min(100%, 520px);
+  background: #111214;
+  border: 1px solid #4c4f57;
+  padding: 40px 32px;
+  text-align: center;
+}
+
+.audiohub-logo-large {
+  display: block;
+  margin: 0 auto 18px;
+  width: 84px;
+  height: 84px;
+  object-fit: contain;
+}
+
+.audiohub-welcome {
+  margin: 0;
+  font-size: clamp(28px, 3vw, 38px);
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+.audiohub-upload-label {
+  margin-top: 14px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.audiohub-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, #0b0c10 0%, #11131a 48%, #1a1d26 100%);
+}
+
+.audiohub-upload-button {
+  width: 140px;
+  min-height: 68px;
+  margin: 22px auto 0;
+  border: 1px solid #64646a;
+  background: #3f3f46;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.audiohub-upload-button:hover {
+  background: #4a4a52;
+}
+
+.audiohub-hidden-input {
+  display: none;
+}
+
+.audiohub-helper {
+  margin-top: 14px;
+  font-size: 14px;
+  color: #cdcdcf;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.audiohub-processing-box {
+  width: min(100%, 260px);
+  min-height: 74px;
+  margin: 24px auto 0;
+  border: 1px solid #66676b;
+  background: #4a4a50;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  font-weight: 700;
+  padding: 10px 16px;
+}
+
+.audiohub-appbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  width: 100%;
+  min-height: 72px;
+  background: #0a0a0a;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  box-sizing: border-box;
+  border: none;
+}
+
+.audiohub-toolbar {
+  position: fixed;
+  top: 72px;
+  left: 0;
+  right: 0;
+  z-index: 90;
+  width: 100%;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 24px;
+  box-sizing: border-box;
+  background: linear-gradient(
+    to bottom,
+    rgba(15, 16, 18, 0.86) 0%,
+    rgba(15, 16, 18, 0.78) 70%,
+    rgba(15, 16, 18, 0.66) 100%
+  );
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: none;
+}
+
+.audiohub-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.audiohub-brand-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.audiohub-brand-title {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.audiohub-search-wrap {
+  display: flex;
+  justify-content: center;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.audiohub-search {
+  width: 100%;
+  max-width: 520px;
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid #54555a;
+  background: #050505;
+  color: #f5f5f5;
+  padding: 0 14px;
+  font-size: 14px;
+  outline: none;
+}
+
+.audiohub-icon-pack {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.audiohub-icon-btn,
+.audiohub-mini-btn {
+  border: 1px solid #5f6065;
+  background: #0a0a0b;
+  color: #f5f5f5;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.audiohub-icon-btn:hover,
+.audiohub-mini-btn:hover {
+  background: #17181b;
+}
+
+.audiohub-icon-btn {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #5f6065;
+  background: #0a0a0b;
+  cursor: pointer;
+  padding: 0;
+  flex: 0 0 42px;
+}
+
+.audiohub-mini-btn {
+  min-width: 148px;
+  min-height: 42px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+
+.audiohub-nav-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  display: block;
+}
+
+.audiohub-toolbar {
+  position: fixed;
+  top: 72px;
+  left: 0;
+  right: 0;
+  z-index: 90;
+
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 24px;
+  box-sizing: border-box;
+
+  background: linear-gradient(
+    to bottom,
+    rgba(15, 16, 18, 0.86) 0%,
+    rgba(15, 16, 18, 0.78) 70%,
+    rgba(15, 16, 18, 0.66) 100%
+  );
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.audiohub-toolbar-left {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.audiohub-toolbar-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.audiohub-toolbar-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.audiohub-public-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.audiohub-user-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.audiohub-toolbar .audiohub-mini-btn {
+  flex: 0 0 auto;
+}
+
+.audiohub-toggle {
+  width: 58px;
+  height: 28px;
+  border: 1px solid #5d5d60;
+  background: #0a0a0b;
+  position: relative;
+  cursor: pointer;
+}
+
+.audiohub-toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 20px;
+  background: var(--blue);
+  transition: transform 0.15s ease;
+}
+
+.audiohub-toggle.on .audiohub-toggle-knob {
+  transform: translateX(28px);
+}
+
+.audiohub-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--green);
+  flex-shrink: 0;
+}
+
+.audiohub-username {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.audiohub-dashboard-shell {
+  width: 100%;
+  padding: 152px 24px 24px;
+  box-sizing: border-box;
+  background: transparent;
+}
+
+.audiohub-dashboard {
+  margin-top: 14px;
+  border: 1px solid #535459;
+  background: transparent;
+  padding: 24px;
+}
+
+.audiohub-top-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.audiohub-card {
+  border: 1px solid #4e4f54;
+  background: #0a0a0a;
+  padding: 12px;
+}
+
+.audiohub-card-title {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  line-height: 1.2;
+}
+
+.audiohub-card-frame {
+  border: 1px solid #4d4e52;
+  padding: 12px;
+  display: grid;
+  gap: 12px;
+  min-height: 320px;
+}
+
+.audiohub-chart-list-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.95fr) minmax(260px, 1.05fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.audiohub-chart-stack {
+  display: grid;
+  grid-template-rows: 1fr auto 1fr;
+  gap: 12px;
+}
+
+.audiohub-chart-box {
+  border: 1px solid #4c4d50;
+  padding: 14px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 110px;
+}
+
+.audiohub-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 16px;
+  height: 100%;
+  width: 100%;
+}
+
+.audiohub-bar {
+  width: 28px;
+  min-height: 24px;
+  background: var(--blue);
+  border: 1px solid #8ec8ff;
+  flex: 0 0 auto;
+}
+
+.audiohub-slider {
+  min-height: 28px;
+  border: 1px solid #4a4b4e;
+  position: relative;
+}
+
+.audiohub-slider-track {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  background: #f0f0f0;
+}
+
+.audiohub-slider-thumb {
+  position: absolute;
+  top: 8px;
+  left: 28%;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #1d1d1d;
+}
+
+.audiohub-list-box {
+  border: 1px solid #4c4d50;
+  padding: 12px 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.audiohub-list-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.audiohub-list-num {
+  font-size: 12px;
+  color: #f0f0f0;
+}
+
+.audiohub-line {
+  height: 14px;
+  border: 1px solid #67676a;
+  width: 100%;
+}
+
+.audiohub-line.short {
+  width: 70%;
+}
+
+.audiohub-line.mid {
+  width: 84%;
+}
+
+.audiohub-line.long {
+  width: 100%;
+}
+
+.audiohub-pie-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.audiohub-pie-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.audiohub-pie-row {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+}
+
+.audiohub-pie {
+  width: 110px;
+  height: 110px;
+  border-radius: 999px;
+  border: 2px solid var(--blue);
+  position: relative;
+  background: conic-gradient(var(--blue) 0 66%, transparent 66% 100%);
+  margin: 0 auto;
+}
+
+.audiohub-pie::after {
+  content: "";
+  position: absolute;
+  inset: 20px;
+  border-radius: 999px;
+  background: #090909;
+  border: 1px solid #4d4e51;
+}
+
+.audiohub-progress-col {
+  display: grid;
+  gap: 12px;
+}
+
+.audiohub-progress-group {
+  display: grid;
+  gap: 8px;
+}
+
+.audiohub-progress-title {
+  font-size: 14px;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.audiohub-progress-wrap {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) 60px 40px 60px;
+  gap: 10px;
+  align-items: center;
+}
+
+.audiohub-progress-bar {
+  height: 16px;
+  border: 1px solid #58595d;
+}
+
+.audiohub-progress-num {
+  font-size: 12px;
+  text-align: center;
+}
+
+.audiohub-section {
+  margin-top: 16px;
+  border: 1px solid #525359;
+  background: #0a0a0a;
+  padding: 16px;
+}
+
+.audiohub-section-title {
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  line-height: 1.2;
+}
+
+.audiohub-report-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.audiohub-report-row {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  font-size: 14px;
+}
+
+.audiohub-report-key {
+  text-align: right;
+}
+
+.audiohub-report-value {
+  border-bottom: 1px solid #7b7b81;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  padding: 2px 8px;
+  overflow-wrap: anywhere;
+}
+
+.audiohub-compare-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.audiohub-compare-block {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.audiohub-inline-fill {
+  display: inline-block;
+  border-bottom: 1px solid #8a8a90;
+  min-width: 90px;
+  padding: 0 6px 2px;
+  margin: 0 4px;
+}
+
+.audiohub-recommend-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+}
+
+.audiohub-recommend-col {
+  display: grid;
+  gap: 12px;
+}
+
+.audiohub-small-title {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.audiohub-field-row {
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.audiohub-field-box {
+  height: 18px;
+  border: 1px solid #77787c;
+}
+
+.audiohub-playlist-row {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.audiohub-chart-panel {
+  border: 1px solid #4c4d50;
+  padding: 16px;
+  min-height: 220px;
+  background: #090909;
+}
+
+.audiohub-list-text {
+  margin-left: 8px;
+}
+
+.audiohub-donut-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.recharts-default-tooltip {
+  border-radius: 0 !important;
+}
+
+.audiohub-small-input {
+  height: 34px;
+  border: 1px solid #77787c;
+  background: transparent;
+  color: #fff;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.audiohub-small-pill {
+  border: 1px solid #77787c;
+  background: #050505;
+  color: #f5f5f5;
+  padding: 8px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.audiohub-small-pill:hover {
+  background: #121316;
+}
+
+.audiohub-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  z-index: 2000;
+}
+
+.audiohub-modal {
+  width: min(960px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  border: 1px solid #73737a;
+  background: #0a0a0b;
+  padding: 16px;
+  z-index: 2001;
+}
+
+.audiohub-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #525257;
+  padding-bottom: 10px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.audiohub-modal-close {
+  border: 1px solid #68696d;
+  background: #0a0a0b;
+  color: #fff;
+  min-height: 36px;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.audiohub-modal-close:hover {
+  background: #151619;
+}
+
+.audiohub-modal-body {
+  padding-top: 14px;
+}
+
+.audiohub-snapshot-item {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.audiohub-edit-dot {
+  width: 22px;
+  height: 22px;
+  border: 1px solid #8c8d92;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+}
+
+.audiohub-snapshot-input {
+  min-height: 38px;
+  border: 1px solid #7a7b80;
+  background: transparent;
+  color: #fff;
+  padding: 0 10px;
+  font-size: 14px;
+}
+
+.audiohub-snapshot-input.is-locked {
+  cursor: default;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+.audiohub-snapshot-input.is-editing {
+  cursor: text;
+  pointer-events: auto;
+  opacity: 1;
+}
+
+.audiohub-modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding-top: 18px;
+}
+
+.audiohub-action-btn {
+  min-width: 120px;
+  min-height: 42px;
+  border: 1px solid #78797d;
+  background: #070708;
+  color: #fff;
+  cursor: pointer;
+}
+
+.audiohub-action-btn:hover {
+  background: #121316;
+}
+
+.audiohub-home-loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  color: #f5f5f5;
+  background: #050505;
+  font-size: 20px;
+  padding: 24px;
+  text-align: center;
+}
+
+.audiohub-viz-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.audiohub-viz-left,
+.audiohub-viz-right {
+  display: grid;
+  gap: 16px;
+}
+
+.audiohub-viz-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.audiohub-toggle-chip {
+  min-width: 110px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #5f6065;
+  background: #0a0a0b;
+  color: #f5f5f5;
+  cursor: pointer;
+}
+
+.audiohub-toggle-chip:hover {
+  background: #17181b;
+}
+
+.audiohub-metric-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.audiohub-vs-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+
+.audiohub-vs-box {
+  min-height: 120px;
+  border: 1px solid #4c4d50;
+  background: #090909;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 16px;
+}
+
+.audiohub-vs-label {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.audiohub-vs-value {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.audiohub-vs-mid {
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+@media (max-width: 1200px) {
+  .audiohub-appbar {
+    grid-template-columns: 1fr;
+  }
+
+  .audiohub-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .audiohub-top-grid,
+  .audiohub-recommend-grid,
+  .audiohub-chart-list-layout,
+  .audiohub-viz-grid,
+  .audiohub-metric-split {
+    grid-template-columns: 1fr;
+  }
+
+  .audiohub-pie-row {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .audiohub-page {
+    padding: 12px;
+  }
+
+  .audiohub-dashboard,
+  .audiohub-section,
+  .audiohub-card,
+  .audiohub-card-frame {
+    padding: 12px;
+  }
+
+  .audiohub-toolbar {
+    gap: 12px;
+    justify-items: center;
+  }
+
+  .audiohub-toolbar-left,
+  .audiohub-toolbar-center,
+  .audiohub-toolbar-right {
+    justify-content: center;
+  }
+
+  .audiohub-report-row,
+  .audiohub-field-row,
+  .audiohub-playlist-row,
+  .audiohub-progress-wrap,
+  .audiohub-snapshot-item {
+  }
+
+  .audiohub-report-key {
+    text-align: left;
+  }
+
+  .audiohub-mini-btn,
+  .audiohub-icon-btn,
+  .audiohub-search,
+  .audiohub-small-pill,
+  .audiohub-action-btn {
+    width: 100%;
+  }
+
+  .audiohub-icon-pack {
+    justify-content: stretch;
+  }
+
+  .audiohub-bars {
+    gap: 10px;
+  }
+
+  .audiohub-bar {
+    width: 18px;
+  }
 }
