@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from app.core.auth import get_current_user_id
 from app.core.supabase_client import supabase
-from app.utils.metrics import compute_and_save_snapshot_metrics
+from app.utils.metrics import compute_and_save_snapshot_metrics, compute_global_metrics
 
 router = APIRouter(prefix="/metrics", tags=["metrics"])
 
@@ -98,6 +98,11 @@ def list_snapshots(user_id: str = Depends(get_current_user_id)):
         .execute()
     )
     return result.data or []
+
+
+@router.get("/global")
+def get_global_metrics(user_id: str = Depends(get_current_user_id)):
+    return compute_global_metrics()
 
 
 @router.post("/reset")

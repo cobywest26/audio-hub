@@ -102,3 +102,158 @@ def compute_and_save_user_metrics(user_id: str) -> dict:
     return metrics
 
 
+def get_latest_snapshots_per_user(page_size: int = 1000) -> list[dict]:
+    rows: list[dict] = []
+    start = 0
+
+    while True:
+        page = (
+            supabase.table("snapshots")
+            .select("id,user_id,created_at")
+            .eq("status", "ready")
+            .order("created_at", desc=True)
+            .range(start, start + page_size - 1)
+            .execute()
+        ).data or []
+
+        rows.extend(page)
+
+        if len(page) < page_size:
+            break
+
+        start += page_size
+
+    latest_by_user: dict[str, dict] = {}
+    for row in rows:
+        user_id = row.get("user_id")
+        if user_id not in latest_by_user:
+            latest_by_user[user_id] = row
+
+    return list(latest_by_user.values())
+
+
+def fetch_global_history_rows(snapshot_ids: list[str], page_size: int = 1000) -> list[dict]:
+    rows: list[dict] = []
+    start = 0
+
+    while True:
+        page = (
+            supabase.table("listening_history")
+            .select("ms_played,track_name,artist_name,spotify_track_uri")
+            .in_("snapshot_id", snapshot_ids)
+            .range(start, start + page_size - 1)
+            .execute()
+        ).data or []
+
+        rows.extend(page)
+
+        if len(page) < page_size:
+            break
+
+        start += page_size
+
+    return rows
+
+
+def empty_global_metrics() -> dict:
+    return {
+        "total_streams": 0,
+        "total_ms_played": 0,
+        "unique_tracks": 0,
+        "unique_artists": 0,
+        "top_track": None,
+        "top_artist": None,
+        "total_active_users": 0,
+        "top_tracks": [],
+        "top_artists": [],
+    }
+
+
+def compute_global_metrics() -> dict:
+    latest_snapshots = get_latest_snapshots_per_user()
+
+    if not latest_snapshots:
+        return empty_global_metrics()
+
+    snapshot_ids = [row["id"] for row in latest_snapshots if row.get("id")]
+
+    if not snapshot_ids:
+        return empty_global_metrics()
+
+    rows = fetch_global_history_rows(snapshot_ids)
+
+    if not rows:
+        empty_metrics = empty_global_metrics()
+        empty_metrics["total_active_users"] = len(
+            {row["user_id"] for row in latest_snapshots if row.get("user_id")}
+        )
+        return empty_metrics
+
+    total_streams = len(rows)
+    total_ms_played = sum(row.get("ms_played", 0) or 0 for row in rows)
+    total_active_users = len(
+        {row["user_id"] for row in latest_snapshots if row.get("user_id")}
+    )
+
+    unique_track_keys: set[str] = set()
+    unique_artists: set[str] = set()
+
+    track_counter: Counter[str] = Counter()
+    artist_counter: Counter[str] = Counter()
+
+    track_labels: dict[str, str] = {}
+
+    for row in rows:
+        track_name = (row.get("track_name") or "").strip()
+        artist_name = (row.get("artist_name") or "").strip()
+        track_uri = (row.get("spotify_track_uri") or "").strip()
+
+        if artist_name:
+            unique_artists.add(artist_name)
+            artist_counter[artist_name] += 1
+
+        # Prefer Spotify URI for identity; fall back to name+artist if URI is missing.
+        track_key = track_uri or f"{track_name}::{artist_name}"
+
+        if track_name or artist_name:
+            unique_track_keys.add(track_key)
+            track_counter[track_key] += 1
+
+            if track_key not in track_labels:
+                if track_name and artist_name:
+                    track_labels[track_key] = f"{track_name} - {artist_name}"
+                elif track_name:
+                    track_labels[track_key] = track_name
+                else:
+                    track_labels[track_key] = "Unknown Track"
+
+    top_track_key = track_counter.most_common(1)[0][0] if track_counter else None
+    top_artist_name = artist_counter.most_common(1)[0][0] if artist_counter else None
+
+    top_tracks = [
+        {
+            "name": track_labels.get(track_key, track_key),
+            "streams": count,
+        }
+        for track_key, count in track_counter.most_common(10)
+    ]
+
+    top_artists = [
+        {
+            "name": artist_name,
+            "streams": count,
+        }
+        for artist_name, count in artist_counter.most_common(10)
+    ]
+
+    return {
+        "total_streams": total_streams,
+        "total_ms_played": total_ms_played,
+        "unique_tracks": len(unique_track_keys),
+        "unique_artists": len(unique_artists),
+        "top_track": track_labels.get(top_track_key) if top_track_key else None,
+        "top_artist": top_artist_name,
+        "total_active_users": total_active_users,
+        "top_tracks": top_tracks,
+        "top_artists": top_artists,
+    }
