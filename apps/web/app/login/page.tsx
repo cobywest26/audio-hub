@@ -10,7 +10,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "spotify",
       options: {
-        redirectTo: "http://localhost:3000/upload",
+        redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 
