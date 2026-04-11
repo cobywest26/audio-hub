@@ -266,7 +266,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [resetting, setResetting] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const [publicProfile, setPublicProfile] = useState(true);
+  //const [publicProfile, setPublicProfile] = useState(true);
   const [username, setUsername] = useState("Spotify Username");
   const [modal, setModal] = useState<ModalType>(null);
   const [artistChartType, setArtistChartType] = useState<"bar" | "pie">("bar");
@@ -298,8 +298,8 @@ export default function DashboardPage() {
           "Spotify Username"
       );
 
-      const stored = window.localStorage.getItem("audiohub-public-profile");
-      if (stored) setPublicProfile(stored === "true");
+      //const stored = window.localStorage.getItem("audiohub-public-profile");
+      //if (stored) setPublicProfile(stored === "true");
 
       try {
         const [latestData, snapshotList] = await Promise.all([
@@ -325,9 +325,11 @@ export default function DashboardPage() {
     loadDashboard();
   }, [router]);
 
+  /*
   useEffect(() => {
     window.localStorage.setItem("audiohub-public-profile", String(publicProfile));
   }, [publicProfile]);
+  */
 
   useEffect(() => {
       if (!editingSnapshotId) return;
@@ -535,8 +537,8 @@ export default function DashboardPage() {
     <>
       <AppShell
         username={username}
-        publicProfile={publicProfile}
-        onTogglePublic={() => setPublicProfile((current) => !current)}
+        //publicProfile={publicProfile}
+        //onTogglePublic={() => setPublicProfile((current) => !current)}
         onSnapshots={() => setModal("snapshots")}
         onReset={() => setModal("reset")}
         onLogout={handleLogout}
@@ -546,7 +548,7 @@ export default function DashboardPage() {
       >
       <section className="audiohub-section">
           <div className="audiohub-section-title audiohub-gradient-title">
-              Data Visualization
+              Your Highlights
           </div>
           <div className="audiohub-viz-rows">
             <div className="audiohub-viz-row audiohub-viz-row--triple">

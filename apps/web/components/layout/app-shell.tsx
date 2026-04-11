@@ -5,8 +5,8 @@ import Image from "next/image";
 type AppShellProps = {
   children: React.ReactNode;
   username: string;
-  publicProfile: boolean;
-  onTogglePublic: () => void;
+  //publicProfile: boolean;
+  //onTogglePublic: () => void;
   onSnapshots: () => void;
   onReset: () => void;
   onProfile: () => void;
@@ -18,8 +18,8 @@ type AppShellProps = {
 export function AppShell({
   children,
   username,
-  publicProfile,
-  onTogglePublic,
+  //publicProfile,
+  //onTogglePublic,
   onSnapshots,
   onReset,
   onProfile,
@@ -91,22 +91,24 @@ export function AppShell({
 
         <div className="audiohub-toolbar">
           <div className="audiohub-toolbar-left">
-            <div className="audiohub-public-wrap">
-              <span>Public</span>
-              <button
-                type="button"
-                className={`audiohub-toggle ${publicProfile ? "on" : ""}`}
-                onClick={onTogglePublic}
-                aria-pressed={publicProfile}
-              >
-                <span className="audiohub-toggle-knob" />
-              </button>
-            </div>
+            {/*
+              <div className="audiohub-public-wrap">
+                <span>Public</span>
+                <button
+                  type="button"
+                  className={`audiohub-toggle ${publicProfile ? "on" : ""}`}
+                  onClick={onTogglePublic}
+                  aria-pressed={publicProfile}
+                >
+                  <span className="audiohub-toggle-knob" />
+                </button>
+              </div>
+            */}
           </div>
 
           <div className="audiohub-toolbar-center">
             <div className="audiohub-user-wrap">
-              <span className="audiohub-username">{username}</span>
+              <span className="audiohub-username">Hello, {username}!</span>
             </div>
           </div>
 
