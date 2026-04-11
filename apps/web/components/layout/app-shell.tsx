@@ -10,6 +10,7 @@ type AppShellProps = {
   onSnapshots: () => void;
   onReset: () => void;
   onProfile: () => void;
+  onRecommender: () => void;
   onGlobe: () => void;
   onLogout: () => void;
   loggingOut?: boolean;
@@ -23,6 +24,7 @@ export function AppShell({
   onSnapshots,
   onReset,
   onProfile,
+  onRecommender,
   onGlobe,
   onLogout,
   loggingOut,
@@ -55,6 +57,22 @@ export function AppShell({
           </div>
 
           <div className="audiohub-icon-pack">
+            <button
+              type="button"
+              className="audiohub-icon-btn"
+              onClick={onRecommender}
+              aria-label="Recommender"
+              title="Recommender"
+            >
+              <Image
+                src="/recommender-icon.png"
+                alt="Recommender"
+                width={22}
+                height={22}
+                className="audiohub-nav-icon"
+              />
+            </button>
+
             <button
               type="button"
               className="audiohub-icon-btn"

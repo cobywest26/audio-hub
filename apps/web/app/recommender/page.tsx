@@ -41,134 +41,160 @@ type LatestResponse = {
   metrics: Metrics | null;
 };
 
-export function RecommenderPage() {
-    const router = useRouter();
-    const [publicProfile, setPublicProfile] = useState(true);
-    const [username, setUsername] = useState("Spotify Username");
-    const [signingOut, setSigningOut] = useState(false);
-    const [latest, setLatest] = useState<LatestResponse | null>(null);
-    const metrics = latest?.metrics ?? null;
-    const [loading, setLoading] = useState(true);
+export default function RecommenderPage() {
+  const router = useRouter();
+  const [publicProfile, setPublicProfile] = useState(true);
+  const [username, setUsername] = useState("Spotify Username");
+  const [signingOut, setSigningOut] = useState(false);
+  const [latest, setLatest] = useState<LatestResponse | null>(null);
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        async function loadUser() {
-            const supabase = getSupabaseBrowserClient();
+  useEffect(() => {
+    async function loadPage() {
+      const supabase = getSupabaseBrowserClient();
 
-            const {
-                data: {session},
-            } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-            if (!session?.access_token) {
-                router.push("/login");
-                return;
-            }
+      if (!session?.access_token) {
+        router.push("/login");
+        return;
+      }
 
-            const {
-                data: {user},
-            } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-            setUsername(
-                user?.user_metadata?.preferred_username ||
-                user?.user_metadata?.user_name ||
-                user?.user_metadata?.name ||
-                user?.email?.split("@")[0] ||
-                "Spotify Username"
-            );
+      setUsername(
+        user?.user_metadata?.preferred_username ||
+          user?.user_metadata?.user_name ||
+          user?.user_metadata?.name ||
+          user?.email?.split("@")[0] ||
+          "Spotify Username"
+      );
 
-            const stored = window.localStorage.getItem("audiohub-public-profile");
-            if (stored) setPublicProfile(stored === "true");
-                try {
-              const latestData = await getLatestMetrics(session.access_token);
-              setLatest(latestData);
-            } catch (error) {
-              console.error("Failed to load recommender data:", error);
-            } finally {
-              setLoading(false);
-            }
-        }
+      const stored = window.localStorage.getItem("audiohub-public-profile");
+      if (stored) setPublicProfile(stored === "true");
 
-        loadUser();
-    }, [router]);
-
-    useEffect(() => {
-        window.localStorage.setItem("audiohub-public-profile", String(publicProfile));
-    }, [publicProfile]);
-
-    async function handleLogout() {
-        try {
-            setSigningOut(true);
-            await signOutUser();
-            router.push("/login");
-        } catch (error) {
-            console.error("Failed to sign out:", error);
-        } finally {
-            setSigningOut(false);
-        }
+      try {
+        const latestData = await getLatestMetrics(session.access_token);
+        setLatest(latestData);
+      } catch (error) {
+        console.error("Failed to load recommender data:", error);
+      } finally {
+        setLoading(false);
+      }
     }
 
-    if (loading) {
-        return <main className="audiohub-home-loading">Loading recommendations...</main>;
+    loadPage();
+  }, [router]);
+
+  useEffect(() => {
+    window.localStorage.setItem("audiohub-public-profile", String(publicProfile));
+  }, [publicProfile]);
+
+  async function handleLogout() {
+    try {
+      setSigningOut(true);
+      await signOutUser();
+      router.push("/login");
+    } catch (error) {
+      console.error("Failed to sign out:", error);
+    } finally {
+      setSigningOut(false);
     }
+  }
 
-    if (!latest?.has_data || !metrics) {
-        return (
-            <main className="audiohub-home-loading">
-                No listening data yet. Upload your Spotify data first.
-            </main>
-        );
-    }
+  if (loading) {
+    return <main className="audiohub-home-loading">Loading recommendations...</main>;
+  }
 
-    return (
-        <AppShell
-            username={username}
-            publicProfile={publicProfile}
-            onTogglePublic={() => setPublicProfile((current) => !current)}
-            onSnapshots={() => router.push("/dashboard")}
-            onReset={() => router.push("/upload")}
-            onLogout={handleLogout}
-            loggingOut={signingOut}
-            onProfile={() => router.push("/dashboard")}
-            onGlobe={() => alert("Global Insights page not implemented yet.")}
-        >
-            <section className="audiohub-section">
-                <div className="audiohub-section-title audiohub-gradient-title">
-                    Recommendations
-                </div>
+  return (
+    <AppShell
+      username={username}
+      publicProfile={publicProfile}
+      onTogglePublic={() => setPublicProfile((current) => !current)}
+      onSnapshots={() => router.push("/dashboard")}
+      onReset={() => router.push("/upload")}
+      onLogout={handleLogout}
+      loggingOut={signingOut}
+      onProfile={() => router.push("/dashboard")}
+      onRecommender={() => router.push("/recommender")}
+      onGlobe={() => alert("Global Insights page not implemented yet.")}
+    >
+      <section className="audiohub-section">
+        <div className="audiohub-section-title audiohub-gradient-title">
+          Recommendations
+        </div>
 
-                <div className="audiohub-recommend-grid">
-                    <section className="audiohub-section">
-                        <div className="audiohub-section-title audiohub-gradient-title">
-                            Recommendations
-                        </div>
-                        <div className="audiohub-recommend-grid">
-                            <div className="audiohub-recommend-col">
-                                <div className="audiohub-small-title">Artists</div>
+        <div className="audiohub-card">
+          <div className="audiohub-section-title">Recommendations</div>
 
-                                <div className="audiohub-field-row">
-                                    <div>Artist</div>
-                                    <div className="audiohub-field-box"/>
-                                </div>
-                                <div className="audiohub-field-row">
-                                    <div>Artist</div>
-                                    <div className="audiohub-field-box"/>
-                                </div>
-                                <div className="audiohub-field-row">
-                                    <div>Artist</div>
-                                    <div className="audiohub-field-box"/>
-                                </div>
+          <div
+            className="audiohub-recommend-grid"
+            style={{ display: "flex", justifyContent: "center" }}
+          >
+            <div
+              className="audiohub-recommend-col"
+              style={{
+                width: "100%",
+                maxWidth: "700px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textAlign: "center",
+              }}
+            >
+              <div className="audiohub-small-title">Artists</div>
 
-                                <div className="audiohub-playlist-row">
-                                    <div>Curated Playlist:</div>
-                                    <input className="audiohub-small-input" defaultValue="Name your playlist"/>
-                                    <button type="button" className="audiohub-small-pill">
-                                        Export to Spotify
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-            </section>
-        </AppShell>
-    );
+              <div
+                className="audiohub-field-row"
+                style={{ width: "100%", maxWidth: "500px", justifyContent: "center", gap: "16px" }}
+              >
+                <div>Artist</div>
+                <div className="audiohub-field-box" />
+              </div>
+
+              <div
+                className="audiohub-field-row"
+                style={{ width: "100%", maxWidth: "500px", justifyContent: "center", gap: "16px" }}
+              >
+                <div>Artist</div>
+                <div className="audiohub-field-box" />
+              </div>
+
+              <div
+                className="audiohub-field-row"
+                style={{ width: "100%", maxWidth: "500px", justifyContent: "center", gap: "16px" }}
+              >
+                <div>Artist</div>
+                <div className="audiohub-field-box" />
+              </div>
+
+              <div
+                className="audiohub-playlist-row"
+                style={{
+                  width: "100%",
+                  maxWidth: "700px",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  gap: "12px",
+                  flexWrap: "wrap",
+                  marginTop: "20px",
+                }}
+              >
+                <div>Curated Playlist:</div>
+                <input className="audiohub-small-input" defaultValue="Name your playlist" />
+                <button type="button" className="audiohub-small-pill">
+                  Export to Spotify
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </AppShell>
+  );
 }
