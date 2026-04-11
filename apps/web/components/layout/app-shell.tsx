@@ -106,7 +106,6 @@ export function AppShell({
 
           <div className="audiohub-toolbar-center">
             <div className="audiohub-user-wrap">
-              <span className="audiohub-avatar" />
               <span className="audiohub-username">{username}</span>
             </div>
           </div>

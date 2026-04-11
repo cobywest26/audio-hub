@@ -7,8 +7,10 @@
   --panel-2: #111214;
   --line: #3f4248;
   --line-soft: #232428;
-  --blue: #34a0ff;
-  --green: #22c55e;
+  --purple: #C64B8C;
+  --orange: #FF6E00;
+  --gradient-start: 270;
+  --gradient-end: 25;
 }
 
 @theme inline {
@@ -221,14 +223,14 @@ a {
 }
 
 .audiohub-brand-logo {
-  width: 28px;
-  height: 28px;
+  width: 40px;
+  height: 40px;
   object-fit: contain;
 }
 
 .audiohub-brand-title {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 35px;
+  font-weight: 800;
   line-height: 1;
 }
 
@@ -395,7 +397,7 @@ a {
   left: 3px;
   width: 22px;
   height: 20px;
-  background: var(--blue);
+  background: var(--purple);
   transition: transform 0.15s ease;
 }
 
@@ -403,16 +405,10 @@ a {
   transform: translateX(28px);
 }
 
-.audiohub-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  background: var(--green);
-  flex-shrink: 0;
-}
-
 .audiohub-username {
-  max-width: 180px;
+  max-width: 360px;
+  font-size: larger;
+    font-weight: bolder;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -495,8 +491,8 @@ a {
 .audiohub-bar {
   width: 28px;
   min-height: 24px;
-  background: var(--blue);
-  border: 1px solid #8ec8ff;
+  background: var(--purple);
+  border: 1px solid #FF6E00;
   flex: 0 0 auto;
 }
 
@@ -586,9 +582,9 @@ a {
   width: 110px;
   height: 110px;
   border-radius: 999px;
-  border: 2px solid var(--blue);
+  border: 2px solid var(--purple);
   position: relative;
-  background: conic-gradient(var(--blue) 0 66%, transparent 66% 100%);
+  background: conic-gradient(var(--purple) 0 66%, transparent 66% 100%);
   margin: 0 auto;
 }
 
@@ -683,15 +679,44 @@ a {
 .audiohub-compare-block {
   display: grid;
   gap: 8px;
-  font-size: 14px;
+  font-size: 15px;
   text-align: center;
   line-height: 1.5;
 }
 
-.audiohub-inline-fill {
+.audiohub-gradient-title {
+  --title-start: #6f2da8;
+  --title-end: #ff9900;
+
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: linear-gradient(90deg, var(--title-start), var(--title-end));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  transition: background 0.15s linear;
+}
+
+.audiohub-compare-block-title {
+  font-size: 15px;
+  text-align: center;
+  line-height: 1.5;
+  font-weight: 550;
+}
+
+.audiohub-inline-fill-short {
   display: inline-block;
   border-bottom: 1px solid #8a8a90;
   min-width: 90px;
+  padding: 0 6px 2px;
+  margin: 0 4px;
+}
+
+.audiohub-inline-fill-long {
+  display: inline-block;
+  border-bottom: 1px solid #8a8a90;
+  min-width: 140px;
   padding: 0 6px 2px;
   margin: 0 4px;
 }
@@ -944,6 +969,14 @@ a {
   align-items: center;
 }
 
+.audiohub-vs-row-title {
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  line-height: 1.2;
+}
+
 .audiohub-vs-box {
   min-height: 120px;
   border: 1px solid #4c4d50;
@@ -970,6 +1003,56 @@ a {
   font-weight: 700;
 }
 
+.audiohub-viz-rows {
+  display: grid;
+  gap: 16px;
+}
+
+.audiohub-viz-row {
+  display: grid;
+  gap: 16px;
+  align-items: stretch;
+  width: 100%;
+}
+
+.audiohub-viz-row--triple {
+  grid-template-columns: minmax(420px, 1.2fr) minmax(220px, 0.7fr) minmax(220px, 0.7fr);
+}
+
+.audiohub-viz-row--double {
+  grid-template-columns: minmax(420px, 1.2fr) minmax(320px, 0.8fr);
+}
+
+.audiohub-viz-row > .audiohub-card {
+  min-width: 0;
+  height: 100%;
+}
+
+.audiohub-vs-panel {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.audiohub-list-box {
+  height: 100%;
+  align-content: start;
+}
+
+.audiohub-list-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.audiohub-list-text {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 1200px) {
   .audiohub-appbar {
     grid-template-columns: 1fr;
@@ -982,8 +1065,12 @@ a {
   .audiohub-top-grid,
   .audiohub-recommend-grid,
   .audiohub-chart-list-layout,
-  .audiohub-viz-grid,
-  .audiohub-metric-split {
+  .audiohub-viz-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .audiohub-viz-row--triple,
+  .audiohub-viz-row--double {
     grid-template-columns: 1fr;
   }
 

@@ -1,9 +1,30 @@
-from collections import Counter
+from collections import Counter, defaultdict
+from datetime import datetime
 
 from app.core.supabase_client import supabase
 
 
-# Calculates basic metrics for uploaded data
+def parse_end_time(value: str | None) -> datetime | None:
+    if not value:
+        return None
+
+    value = value.strip()
+
+    formats = [
+        "%Y-%m-%d %H:%M",
+        "%Y-%m-%dT%H:%M:%SZ",
+        "%Y-%m-%dT%H:%M:%S.%fZ",
+    ]
+
+    for fmt in formats:
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+
+    return None
+
+
 def compute_metrics(rows: list[dict], user_id: str, snapshot_id: str | None) -> dict:
     total_streams = len(rows)
     total_ms_played = sum(row.get("ms_played", 0) or 0 for row in rows)
@@ -17,6 +38,71 @@ def compute_metrics(rows: list[dict], user_id: str, snapshot_id: str | None) -> 
     top_track = Counter(track_names).most_common(1)
     top_artist = Counter(artist_names).most_common(1)
 
+    artist_stream_counter: Counter[str] = Counter()
+    track_stream_counter: Counter[str] = Counter()
+
+    artist_time_counter: dict[str, int] = defaultdict(int)
+    track_time_counter: dict[str, int] = defaultdict(int)
+
+    day_ms = 0
+    night_ms = 0
+    weekday_ms = 0
+    weekend_ms = 0
+
+    for row in rows:
+        artist_name = (row.get("artist_name") or "").strip()
+        track_name = (row.get("track_name") or "").strip()
+        ms_played = row.get("ms_played", 0) or 0
+
+        if artist_name:
+            artist_stream_counter[artist_name] += 1
+            artist_time_counter[artist_name] += ms_played
+
+        if track_name:
+            track_stream_counter[track_name] += 1
+            track_time_counter[track_name] += ms_played
+
+        end_time = parse_end_time(row.get("played_at"))
+        if end_time:
+            hour = end_time.hour
+            weekday = end_time.weekday()  # 0=Mon ... 6=Sun
+
+            if 8 <= hour < 20:
+                day_ms += ms_played
+            else:
+                night_ms += ms_played
+
+            if weekday < 5:
+                weekday_ms += ms_played
+            else:
+                weekend_ms += ms_played
+
+    top_artists = [
+        {
+            "name": artist_name,
+            "streams": artist_stream_counter[artist_name],
+            "total_ms_played": artist_time_counter[artist_name],
+        }
+        for artist_name, _ in sorted(
+            artist_time_counter.items(),
+            key=lambda item: item[1],
+            reverse=True,
+        )[:15]
+    ]
+
+    top_tracks = [
+        {
+            "name": track_name,
+            "streams": track_stream_counter[track_name],
+            "total_ms_played": track_time_counter[track_name],
+        }
+        for track_name, _ in sorted(
+            track_time_counter.items(),
+            key=lambda item: item[1],
+            reverse=True,
+        )[:15]
+    ]
+
     return {
         "snapshot_id": snapshot_id,
         "user_id": user_id,
@@ -26,6 +112,12 @@ def compute_metrics(rows: list[dict], user_id: str, snapshot_id: str | None) -> 
         "unique_artists": unique_artists,
         "top_track": top_track[0][0] if top_track else None,
         "top_artist": top_artist[0][0] if top_artist else None,
+        "top_artists": top_artists,
+        "top_tracks": top_tracks,
+        "day_ms": day_ms,
+        "night_ms": night_ms,
+        "weekday_ms": weekday_ms,
+        "weekend_ms": weekend_ms,
     }
 
 
@@ -38,7 +130,7 @@ def fetch_snapshot_metric_rows(user_id: str, snapshot_id: str, page_size: int = 
         # the snapshot's full listening history has been read.
         page = (
             supabase.table("listening_history")
-            .select("ms_played,track_name,artist_name")
+            .select("ms_played,track_name,artist_name,played_at")
             .eq("user_id", user_id)
             .eq("snapshot_id", snapshot_id)
             .range(start, start + page_size - 1)
@@ -95,7 +187,7 @@ def compute_and_save_user_metrics(user_id: str) -> dict:
     metrics = compute_metrics(rows, user_id, snapshot_id=None)
     metrics.pop("snapshot_id", None)
 
-    supabase.table("user_metric").upsert(
+    supabase.table("user_metrics").upsert(
         metrics,
         on_conflict="user_id",
     ).execute()

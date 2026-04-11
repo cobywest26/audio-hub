@@ -21,7 +21,7 @@ def get_user_metrics(user_id: str = Depends(get_current_user_id)):
 
     try:
         result = (
-            supabase.table("user_metric")
+            supabase.table("user_metrics")
             .select("*")
             .eq("user_id", user_id)
             .limit(1)
