@@ -545,7 +545,7 @@ export default function DashboardPage() {
         loggingOut={signingOut}
         onProfile={() => router.push("/dashboard")}
         onRecommender={() => router.push("/recommender")}
-        onGlobe={() => alert("Global Insights page not implemented yet.")}
+        onGlobe={() => router.push("/global-board")}
       >
       <section className="audiohub-section">
           <div className="audiohub-section-title audiohub-gradient-title">
