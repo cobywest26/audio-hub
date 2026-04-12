@@ -114,3 +114,20 @@ export async function renameSnapshot(
 
   return data;
 }
+
+// Fetches aggregate listening metrics across the latest snapshots from each user
+export async function getGlobalMetrics(accessToken: string) {
+  const response = await fetch(`${API_BASE_URL}/metrics/global`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.detail || "Failed to fetch global metrics.");
+  }
+
+  return data;
+}
