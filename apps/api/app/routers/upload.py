@@ -106,6 +106,13 @@ def insert_history_batch(rows: list[dict]) -> None:
 
     supabase.table("listening_history").insert(rows).execute()
 
+# Helper for deleting old listening history for a user whenuploading new data
+def delete_old_history(user_id: str, keep_snapshot_id: str) -> None:
+    {
+        supabase.table("listening_history")
+        .delete().eq("user_id", user_id).neq("snapshot_id", keep_snapshot_id).execute()
+    }
+
 # API POST for Spotify data uploads
 @router.post("/", response_model=UploadResponse)
 async def upload_spotify_file(
@@ -172,6 +179,13 @@ async def upload_spotify_file(
 
         metrics = compute_and_save_snapshot_metrics(user_id, snapshot_id)
         logger.info("Saved snapshot metrics for snapshot %s", snapshot_id)
+
+        delete_old_history(user_id, snapshot_id)
+        logger.info(
+            "Deleted old listening history for user %s, keeping snapshot %s",
+            user_id,
+            snapshot_id,
+        )
 
         try:
             compute_and_save_user_metrics(user_id)
