@@ -154,7 +154,7 @@ def fetch_user_metric_rows(user_id: str, page_size: int = 1000) -> list[dict]:
     while True:
         page = (
             supabase.table("listening_history")
-            .select("ms_played,track_name,artist_name")
+            .select("ms_played,track_name,artist_name,played_at")
             .eq("user_id", user_id)
             .range(start, start + page_size - 1)
             .execute()
@@ -169,36 +169,15 @@ def fetch_user_metric_rows(user_id: str, page_size: int = 1000) -> list[dict]:
 
     return rows
 
-# Computes user metrics from current snapshot's rows
-def fetch_user_metrics_for_snapshot(
-    user_id: str,
-    snapshot_id: str,
-    page_size: int = 1000,
-) -> list[dict]:
-    rows: list[dict] = []
-    start = 0
-
-    while True:
-        page = (
-            supabase.table("listening_history")
-            .select("ms_played,track_name,artist_name,played_at")
-            .eq("user_id", user_id)
-            .eq("snapshot_id", snapshot_id)
-            .range(start, start + page_size - 1)
-            .execute()
-        ).data or []
-
 
 def compute_and_save_snapshot_metrics(user_id: str, snapshot_id: str) -> dict:
     # Read every row for the snapshot before computing metrics
-    rows = fetch_user_metrics_for_snapshot(user_id, snapshot_id)
-
-    metrics = compute_metrics(rows, user_id, snapshot_id=None)
-    metrics.pop("snapshot_id", None)
+    rows = fetch_snapshot_metric_rows(user_id, snapshot_id)
+    metrics = compute_metrics(rows, user_id, snapshot_id=snapshot_id)
 
     supabase.table("snapshot_metric").upsert(
         metrics,
-        on_conflict="user_id"
+        on_conflict="snapshot_id"
     ).execute()
     return metrics
 
