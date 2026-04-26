@@ -3,6 +3,3 @@ uvicorn[standard]
 supabase
 python-multipart
 python-dotenv
-lightfm
-numpy
-scipy

@@ -1,0 +1,103 @@
+AudioHub Recommender Setup
+
+The recommender generates stored recommendation batches with a hybrd discovery
+pipeline. First, a content profile candidate generator builds a weighted user taste profile from
+listening_history and compares that profile against the Kaggle Spotify tracks dataset. Then, when
+OpenAI and Spotify API credentials are configured, an LLM suggests external discovery tracks that
+are not limited to the Kaggle dataset. Each external suggestion is validated through Spotify
+Search before it can be stored for playlist export.
+
+The recommender always excludes tracks the user already listened to, removes duplicate song
+identities, and applies artist diversity so the final list is not dominated by one artist.
+
+If OpenAI or Spotify credentials are missing, the system stores content-profile
+recommendations without external discovery.
+
+Normal API setup:
+
+    cd apps/api
+    python -m venv .venv
+    .venv/bin/python -m pip install -r requirements.txt
+
+Run recommender tests:
+
+    .venv311/bin/python -m unittest tests.test_recommender
+
+Dataset setup:
+
+The recommender expects the Kaggle Spotify Tracks Dataset CSV. If you don't have that,
+you can get it here: https://www.kaggle.com/datasets/maharshipandya/-spotify-tracks-dataset
+
+Set this environment variable in apps/api/.env:
+
+    SPOTIFY_TRACKS_CSV_PATH=/path/to/spotify_tracks.csv
+
+If the env variable is not set, the API looks for:
+
+    apps/api/data/spotify_tracks.csv
+
+Don't commit the Kaggle dataset CSV to the repository.
+
+External discovery setup:
+
+The external discovery layer requires an OpenAI API key and Spotify app credentials (Spotify dev dashboard keys):
+
+    OPENAI_API_KEY=
+    OPENAI_DISCOVERY_MODEL=gpt-4o-mini
+    SPOTIFY_CLIENT_ID=
+    SPOTIFY_CLIENT_SECRET=
+
+Spotify user OAuth tokens are not stored by the backend. External discovery uses
+Spotify's Client Credentials flow for public track search. Playlist export will still need user
+Spotify OAuth later because it writes to the user's Spotify account.
+
+API behavior:
+
+    POST /recommender/generate
+
+Generates a new stored recommendation batch for the authenticated user. The current production
+strategy is content_profile_external_discovery when OpenAI and Spotify validation succeed.
+Otherwise, the strategy is content_profile.
+
+To force content-only generation:
+
+    POST /recommender/generate?use_external_discovery=false
+
+To explicitly use the optional LightFM reranker:
+
+    POST /recommender/generate?use_lightfm_rerank=true
+
+    GET /recommender/me
+
+Returns the latest stored recommendation batch for the authenticated user.
+
+Expected Supabase tables:
+
+    create table if not exists public.recommendation_batches (
+        id uuid primary key default gen_random_uuid(),
+        user_id uuid not null references auth.users(id) on delete cascade,
+        strategy text not null,
+        coverage jsonb not null default '{}'::jsonb,
+        created_at timestamptz not null default now()
+    );
+
+    create table if not exists public.recommendation_items (
+        id uuid primary key default gen_random_uuid(),
+        batch_id uuid not null references public.recommendation_batches(id) on delete cascade,
+        user_id uuid not null references auth.users(id) on delete cascade,
+        rank int not null,
+        track_id text not null,
+        track_name text,
+        artists text,
+        genre text,
+        score double precision,
+        source text,
+        reason text,
+        created_at timestamptz not null default now()
+    );
+
+    create index if not exists recommendation_batches_user_created_idx
+        on public.recommendation_batches(user_id, created_at desc);
+
+    create index if not exists recommendation_items_batch_rank_idx
+        on public.recommendation_items(batch_id, rank);
