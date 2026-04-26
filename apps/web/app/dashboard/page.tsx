@@ -989,17 +989,19 @@ export default function DashboardPage() {
                 You listen to music more than
                 <span className="audiohub-inline-fill-short">{comparePercent}</span>% of others, with
                 <span className="audiohub-inline-fill-short">{totalHours.toLocaleString()}</span>
-                hours listened to!
+                hours listened!
               </div>
             </div>
-            <div className="audiohub-compare-block">
-              <div>
-                You listen to music more than
-                <span className="audiohub-inline-fill-short">{artistDelta}</span>% of people with
-                <span className="audiohub-inline-fill-short">{metrics.unique_artists}</span>
-                hours listened to!
+            {/*
+              <div className="audiohub-compare-block">
+                <div>
+                  You listen to music more than
+                  <span className="audiohub-inline-fill-short">{artistDelta}</span>% of people with
+                  <span className="audiohub-inline-fill-short">{metrics.unique_artists}</span>
+                  hours listened!
+                </div>
               </div>
-            </div>
+            */}
             <div className="audiohub-compare-block">
               <div>
                 While others were listening to

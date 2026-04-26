@@ -11,6 +11,7 @@ export default function LoginPage() {
       provider: "spotify",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
+        scopes: "playlist-modify-private playlist-modify-public",
       },
     });
 
