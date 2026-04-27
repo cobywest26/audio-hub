@@ -97,7 +97,7 @@ def compute_metrics(rows: list[dict], user_id: str, snapshot_id: str | None) -> 
             "total_ms_played": track_time_counter[track_name],
         }
         for track_name, _ in sorted(
-            track_time_counter.items(),
+            track_stream_counter.items(),
             key=lambda item: item[1],
             reverse=True,
         )[:15]

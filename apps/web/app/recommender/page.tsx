@@ -1,53 +1,58 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { getSupabaseBrowserClient, signOutUser } from "@/lib/supabase/client";
-import { getLatestMetrics } from "@/lib/api/client";
+import {
+  getRecommendations,
+  type RecommenderResponse,
+  getRecommenderDebug,
+} from "@/lib/api/client";
+import { t, type AppLanguage, type TranslationKey } from "@/lib/i18n";
 
-type Snapshot = {
-  id: string;
-  name: string | null;
-  created_at: string;
-  status: string;
-  is_active: boolean;
-};
-
-type RankedMetric = {
+type TopArtist = {
   name: string;
-  streams: number;
-  total_ms_played: number;
+  score: number;
 };
 
-type Metrics = {
-  total_streams: number;
-  total_ms_played: number;
-  unique_tracks: number;
-  unique_artists: number;
-  top_track: string | null;
-  top_artist: string | null;
-  top_tracks?: RankedMetric[];
-  top_artists?: RankedMetric[];
-  day_ms?: number;
-  night_ms?: number;
-  weekday_ms?: number;
-  weekend_ms?: number;
-};
+function buildTopRecommendedArtists(
+  recommendations: RecommenderResponse["recommendations"]
+): TopArtist[] {
+  const artistScores = new Map<string, number>();
 
-type LatestResponse = {
-  has_data: boolean;
-  snapshot: Snapshot | null;
-  metrics: Metrics | null;
-};
+  for (const rec of recommendations) {
+    if (!rec.artists) continue;
+
+    const artists = rec.artists
+      .split(/[;,]/)
+      .map((name) => name.trim())
+      .filter(Boolean);
+
+    for (const artist of artists) {
+      artistScores.set(artist, (artistScores.get(artist) ?? 0) + rec.score);
+    }
+  }
+
+  return Array.from(artistScores.entries())
+    .map(([name, score]) => ({ name, score }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+}
 
 export default function RecommenderPage() {
   const router = useRouter();
-  const [publicProfile, setPublicProfile] = useState(true);
   const [username, setUsername] = useState("Spotify Username");
   const [signingOut, setSigningOut] = useState(false);
-  const [latest, setLatest] = useState<LatestResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recommendationData, setRecommendationData] =
+    useState<RecommenderResponse | null>(null);
+  const [language, setLanguage] = useState<AppLanguage>("ENG");
+
+  const translate = (
+    key: TranslationKey,
+    vars?: Record<string, string | number>
+  ) => t(language, key, vars);
 
   useEffect(() => {
     async function loadPage() {
@@ -74,25 +79,25 @@ export default function RecommenderPage() {
           "Spotify Username"
       );
 
-      const stored = window.localStorage.getItem("audiohub-public-profile");
-      if (stored) setPublicProfile(stored === "true");
+      console.log("TOKEN:", session?.access_token);
+
+      const data = await getRecommendations(session.access_token, 20);
 
       try {
-        const latestData = await getLatestMetrics(session.access_token);
-        setLatest(latestData);
+        const data = await getRecommendations(session.access_token, 20);
+        setRecommendationData(data);
       } catch (error) {
         console.error("Failed to load recommender data:", error);
       } finally {
         setLoading(false);
       }
+
+      const debugData = await getRecommenderDebug(session.access_token);
+      console.log("RECOMMENDER DEBUG:", debugData);
     }
 
     loadPage();
   }, [router]);
-
-  useEffect(() => {
-    window.localStorage.setItem("audiohub-public-profile", String(publicProfile));
-  }, [publicProfile]);
 
   async function handleLogout() {
     try {
@@ -106,93 +111,95 @@ export default function RecommenderPage() {
     }
   }
 
+  const topArtists = useMemo(
+    () =>
+      recommendationData?.recommendations
+        ? buildTopRecommendedArtists(recommendationData.recommendations)
+        : [],
+    [recommendationData]
+  );
+
+  const topTracks = useMemo(
+    () => recommendationData?.recommendations?.slice(0, 10) ?? [],
+    [recommendationData]
+  );
+
   if (loading) {
     return <main className="audiohub-home-loading">Loading recommendations...</main>;
+  }
+
+  if (!recommendationData?.has_data) {
+    return (
+      <main className="audiohub-home-loading">
+        No recommendation data yet. Upload Spotify history first.
+      </main>
+    );
   }
 
   return (
     <AppShell
       username={username}
-      publicProfile={publicProfile}
-      onTogglePublic={() => setPublicProfile((current) => !current)}
       onSnapshots={() => router.push("/dashboard")}
       onReset={() => router.push("/upload")}
       onLogout={handleLogout}
       loggingOut={signingOut}
       onProfile={() => router.push("/dashboard")}
       onRecommender={() => router.push("/recommender")}
-      onGlobe={() => alert("Global Insights page not implemented yet.")}
+      onGlobe={() => router.push("/global-board")}
+      language={language}
+      onLanguageChange={setLanguage}
+      translate={translate}
     >
       <section className="audiohub-section">
         <div className="audiohub-section-title audiohub-gradient-title">
-          Recommendations
+          Recommended For You
         </div>
 
-        <div className="audiohub-card">
-          <div className="audiohub-section-title">Recommendations</div>
-
-          <div
-            className="audiohub-recommend-grid"
-            style={{ display: "flex", justifyContent: "center" }}
-          >
-            <div
-              className="audiohub-recommend-col"
-              style={{
-                width: "100%",
-                maxWidth: "700px",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                textAlign: "center",
-              }}
-            >
-              <div className="audiohub-small-title">Artists</div>
-
-              <div
-                className="audiohub-field-row"
-                style={{ width: "100%", maxWidth: "500px", justifyContent: "center", gap: "16px" }}
-              >
-                <div>Artist</div>
-                <div className="audiohub-field-box" />
-              </div>
-
-              <div
-                className="audiohub-field-row"
-                style={{ width: "100%", maxWidth: "500px", justifyContent: "center", gap: "16px" }}
-              >
-                <div>Artist</div>
-                <div className="audiohub-field-box" />
-              </div>
-
-              <div
-                className="audiohub-field-row"
-                style={{ width: "100%", maxWidth: "500px", justifyContent: "center", gap: "16px" }}
-              >
-                <div>Artist</div>
-                <div className="audiohub-field-box" />
-              </div>
-
-              <div
-                className="audiohub-playlist-row"
-                style={{
-                  width: "100%",
-                  maxWidth: "700px",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  gap: "12px",
-                  flexWrap: "wrap",
-                  marginTop: "20px",
-                }}
-              >
-                <div>Curated Playlist:</div>
-                <input className="audiohub-small-input" defaultValue="Name your playlist" />
-                <button type="button" className="audiohub-small-pill">
-                  Export to Spotify
-                </button>
-              </div>
+        <div className="audiohub-viz-row audiohub-viz-row--double">
+          <section className="audiohub-card">
+            <div className="audiohub-list-box">
+              <div className="audiohub-card-title">Top 3 Recommended Artists</div>
+              {topArtists.length > 0 ? (
+                topArtists.map((artist, index) => (
+                  <div key={`${artist.name}-${index}`} className="audiohub-list-row">
+                    <div className="audiohub-list-num">{index + 1}.</div>
+                    <div className="audiohub-list-text">
+                      {artist.name} ({artist.score.toFixed(2)})
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="audiohub-list-row">
+                  <div className="audiohub-list-text">
+                    No artist recommendations available yet.
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
+          </section>
+
+          <section className="audiohub-card">
+            <div className="audiohub-list-box">
+              <div className="audiohub-card-title">Recommended Tracks</div>
+              {topTracks.length > 0 ? (
+                topTracks.map((track, index) => (
+                  <div key={`${track.track_id}-${index}`} className="audiohub-list-row">
+                    <div className="audiohub-list-num">{index + 1}.</div>
+                    <div className="audiohub-list-text">
+                      {track.track_name ?? "Unknown Track"} by{" "}
+                      {track.artists ?? "Unknown Artist"}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="audiohub-list-row">
+                  <div className="audiohub-list-text">
+                    No track recommendations available yet.
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
         </div>
       </section>
     </AppShell>

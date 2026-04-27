@@ -12,11 +12,13 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Default browser metadata for the AudioHub web app.
 export const metadata: Metadata = {
   title: "AudioHub",
   description: "Spotify listening analytics and insights",
 };
 
+// Root Next.js layout that applies global fonts and wraps every page.
 export default function RootLayout({
   children,
 }: Readonly<{
