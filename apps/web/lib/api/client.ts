@@ -43,6 +43,8 @@ export type SpotifyPlaylistExportResult = {
   external_urls?: {
     spotify?: string;
   };
+  snapshot: Snapshot | null;
+  metrics: Metrics | null;
 };
 
 export async function uploadSpotifyData(
@@ -115,6 +117,66 @@ export async function getSnapshots(accessToken: string) {
   }
 
   return data;
+}
+
+export async function getSnapshotMetrics(
+  accessToken: string,
+  snapshotId: string
+) {
+  const response = await fetch(`${API_BASE_URL}/metrics/snapshot/${snapshotId}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.detail || "Failed to fetch snapshot metrics.");
+  }
+
+  return data.metrics;
+}
+
+export async function searchProfiles(accessToken: string, query: string) {
+  const response = await fetch(
+    `${API_BASE_URL}/profiles/search?q=${encodeURIComponent(query)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(data?.detail || "Failed to search profiles.");
+  }
+
+  return data;
+}
+
+export async function getProfileByUsername(
+  accessToken: string,
+  username: string
+) {
+  const response = await fetch(
+    `${API_BASE_URL}/profiles/${encodeURIComponent(username)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(data?.detail || "Failed to load profile.");
+  }
+
+    return data;
 }
 
 export async function resetForNewSnapshot(accessToken: string) {

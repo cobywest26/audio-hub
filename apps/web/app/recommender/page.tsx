@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { getSupabaseBrowserClient, signOutUser } from "@/lib/supabase/client";
+import { t, type AppLanguage, type TranslationKey } from "@/lib/i18n";
 import {
   addTracksToSpotifyPlaylist,
   createSpotifyPlaylist,
@@ -13,10 +14,19 @@ import {
   RecommendationResponse,
 } from "@/lib/api/client";
 
-function sourceLabel(item: RecommendationItem) {
-  if (item.source === "llm_external_spotify_verified") return "External pick";
-  if (item.source === "lightfm_rerank") return "LightFM rerank";
-  return "Catalog match";
+function sourceLabel(
+  item: RecommendationItem,
+  translate: (key: TranslationKey) => string
+) {
+  if (item.source === "llm_external_spotify_verified") {
+    return translate("external_pick");
+  }
+
+  if (item.source === "lightfm_rerank") {
+    return translate("lightfm_rerank");
+  }
+
+  return translate("catalog_match");
 }
 
 function shuffleRecommendations(items: RecommendationItem[]) {
@@ -42,6 +52,12 @@ export default function RecommenderPage() {
   const [pageError, setPageError] = useState<string | null>(null);
   const [playlistName, setPlaylistName] = useState("AudioHub Mix");
   const [exportSuccessUrl, setExportSuccessUrl] = useState<string | null>(null);
+  const [language, setLanguage] = useState<AppLanguage>("ENG");
+
+  const translate = (
+    key: TranslationKey,
+    vars?: Record<string, string | number>
+  ) => t(language, key, vars);
 
   useEffect(() => {
     async function loadPage() {
@@ -200,8 +216,6 @@ export default function RecommenderPage() {
   return (
     <AppShell
       username={username}
-      //publicProfile={publicProfile}
-      //onTogglePublic={() => setPublicProfile((current) => !current)}
       onSnapshots={() => router.push("/dashboard")}
       onReset={() => router.push("/upload")}
       onLogout={handleLogout}
@@ -209,10 +223,16 @@ export default function RecommenderPage() {
       onProfile={() => router.push("/dashboard")}
       onRecommender={() => router.push("/recommender")}
       onGlobe={() => router.push("/global-board")}
+      language={language}
+      onLanguageChange={(nextLanguage) => {
+        setLanguage(nextLanguage);
+        window.localStorage.setItem("audiohub-language", nextLanguage);
+      }}
+      translate={translate}
     >
       <section className="audiohub-section">
         <div className="audiohub-section-title audiohub-gradient-title">
-          Playlist Results
+          {translate("playlist_results")}
         </div>
 
         <div className="audiohub-card">
@@ -226,7 +246,7 @@ export default function RecommenderPage() {
               marginBottom: "18px",
             }}
           >
-            <div className="audiohub-card-title">Recommended Tracks</div>
+            <div className="audiohub-card-title">{translate("recommended_tracks")}</div>
             <button
               type="button"
               className="audiohub-small-pill"
@@ -237,7 +257,7 @@ export default function RecommenderPage() {
                 cursor: generating ? "progress" : "pointer",
               }}
             >
-              {generating ? "Generating..." : hasRecommendations ? "Refresh Mix" : "Generate Mix"}
+              {generating ? "Generating..." : hasRecommendations ? translate("refresh_mix") : translate("generate_mix")}
             </button>
           </div>
 
@@ -294,7 +314,7 @@ export default function RecommenderPage() {
                         color: item.source === "llm_external_spotify_verified" ? "#ffcf84" : "#d8d9dd",
                       }}
                     >
-                      {sourceLabel(item)}
+                      {sourceLabel(item, translate)}
                     </div>
                   </div>
 
@@ -307,12 +327,12 @@ export default function RecommenderPage() {
                       color: "#9ea1a8",
                     }}
                   >
-                    <span>Genre: {item.genre || "Unknown"}</span>
+                    <span>{translate("genre")}: {item.genre || "Unknown"}</span>
                     <span>
-                      Popularity: {typeof item.popularity === "number" ? item.popularity : "N/A"}
+                      {translate("popularity")}: {typeof item.popularity === "number" ? item.popularity : "N/A"}
                     </span>
                     <span>
-                      Score: {typeof item.score === "number" ? item.score.toFixed(3) : "External"}
+                      {translate("score")}: {typeof item.score === "number" ? item.score.toFixed(3) : "External"}
                     </span>
                     {item.track_id ? (
                       <a
@@ -321,7 +341,7 @@ export default function RecommenderPage() {
                         rel="noreferrer"
                         style={{ color: "#ffb34d", textDecoration: "none" }}
                       >
-                        Open in Spotify
+                        {translate("open_spotify")}
                       </a>
                     ) : null}
                   </div>
@@ -338,12 +358,12 @@ export default function RecommenderPage() {
 
       <section className="audiohub-section">
         <div className="audiohub-section-title audiohub-gradient-title">
-          Spotify Export
+          {translate("spotify_export")}
         </div>
 
         <div className="audiohub-card">
           <div className="audiohub-card-title" style={{ marginBottom: "18px" }}>
-            Export Playlist
+            {translate("export_playlist")}
           </div>
 
           <div
@@ -353,7 +373,7 @@ export default function RecommenderPage() {
               marginBottom: "12px",
             }}
           >
-            <div>Playlist name</div>
+            <div>{translate("playlist_name")}</div>
             <input
               className="audiohub-small-input"
               value={playlistName}
@@ -370,7 +390,7 @@ export default function RecommenderPage() {
                 cursor: exporting || !hasRecommendations || !playlistName.trim() ? "not-allowed" : "pointer",
               }}
             >
-              {exporting ? "Exporting..." : "Export to Spotify"}
+              {exporting ? "Exporting..." : translate("export_to_spotify")}
             </button>
           </div>
 

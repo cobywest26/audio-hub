@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { getGlobalMetrics } from "@/lib/api/client";
 import { getSupabaseBrowserClient, signOutUser } from "@/lib/supabase/client";
+import { t, type AppLanguage, type TranslationKey } from "@/lib/i18n";
 
 type RankedGlobalItem = {
   name: string;
@@ -33,6 +34,12 @@ export default function GlobalBoardPage() {
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
   const [username, setUsername] = useState("Spotify Username");
+  const [language, setLanguage] = useState<AppLanguage>("ENG");
+
+  const translate = (
+    key: TranslationKey,
+    vars?: Record<string, string | number>
+  ) => t(language, key, vars);
 
   useEffect(() => {
     async function loadGlobalBoard() {
@@ -110,6 +117,9 @@ export default function GlobalBoardPage() {
       onProfile={() => router.push("/dashboard")}
       onRecommender={() => router.push("/recommender")}
       onGlobe={() => router.push("/global-board")}
+      language={language}
+      onLanguageChange={setLanguage}
+      translate={translate}
     >
       <section className="audiohub-section">
         <div className="audiohub-section-title audiohub-gradient-title">

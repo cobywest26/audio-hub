@@ -16,7 +16,6 @@ NUMERIC_FEATURE_COLUMNS = [
     "popularity",
 ]
 
-
 @dataclass
 class CatalogTrack:
     track_id: str
@@ -138,4 +137,3 @@ def load_catalog(csv_path: str | Path) -> dict[str, CatalogTrack]:
                 catalog[track.track_id] = track
 
     return catalog
-

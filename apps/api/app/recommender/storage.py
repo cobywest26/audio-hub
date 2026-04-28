@@ -36,6 +36,7 @@ def store_recommendation_batch(
             "score": recommendation.get("score"),
             "source": recommendation.get("source"),
             "reason": recommendation.get("reason"),
+            "spotify_uri": recommendation.get("spotify_uri"),
         }
         for recommendation in recommendations
     ]
@@ -72,9 +73,9 @@ def fetch_latest_recommendation_batch(user_id: str) -> dict:
     batch = batch_result.data[0]
     item_result = (
         supabase.table("recommendation_items")
-        .select("rank,track_id,track_name,artists,genre,score,source,reason")
+        .select('"rank",track_id,track_name,artists,genre,score,source,reason,spotify_uri')
         .eq("batch_id", batch["id"])
-        .order("rank")
+        .order("rank", desc=False)
         .execute()
     )
 
