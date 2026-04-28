@@ -4,6 +4,8 @@ import Image from "next/image";
 
 import type { AppLanguage, TranslationKey } from "@/lib/i18n";
 
+import { useEffect } from "react";
+
 // Shared layout contract for authenticated AudioHub pages.
 // Parent pages own the actions and state; AppShell only renders the shell.
 type AppShellProps = {
@@ -56,6 +58,20 @@ export function AppShell({
   translate,
   profileLabel,
 }: AppShellProps) {
+
+  useEffect(() => {
+    const savedLanguage = window.localStorage.getItem("audiohub-language");
+
+    if (savedLanguage === "ENG" || savedLanguage === "SPN") {
+      onLanguageChange(savedLanguage);
+    }
+  }, [onLanguageChange]);
+
+  function handleLanguageChange(nextLanguage: AppLanguage) {
+    onLanguageChange(nextLanguage);
+    window.localStorage.setItem("audiohub-language", nextLanguage);
+  }
+
   return (
     <main className="audiohub-page">
       <div className="audiohub-stage audiohub-stage--full">
@@ -167,14 +183,14 @@ export function AppShell({
               <button
                 type="button"
                 className={`audiohub-language-option ${language === "ENG" ? "active" : ""}`}
-                onClick={() => onLanguageChange("ENG")}
+                onClick={() => handleLanguageChange("ENG")}
               >
                 ENG
               </button>
               <button
                 type="button"
                 className={`audiohub-language-option ${language === "SPN" ? "active" : ""}`}
-                onClick={() => onLanguageChange("SPN")}
+                onClick={() => handleLanguageChange("SPN")}
               >
                 SPN
               </button>

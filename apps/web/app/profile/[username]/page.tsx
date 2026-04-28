@@ -203,15 +203,6 @@ export default function ProfilePage() {
     return () => clearTimeout(t);
   }, [searchValue]);
 
-  // Restores the user's selected language from localStorage on page load.
-  useEffect(() => {
-    const savedLanguage = window.localStorage.getItem("audiohub-language");
-
-    if (savedLanguage === "ENG" || savedLanguage === "SPN") {
-      setLanguage(savedLanguage);
-    }
-  }, []);
-
   const metrics = profileData?.metrics ?? null;
   const totalHours = metrics ? msToHours(metrics.total_ms_played) : 0;
   const archetype = getArchetype(totalHours);

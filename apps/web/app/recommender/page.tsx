@@ -93,14 +93,6 @@ export default function RecommenderPage() {
   }, [router]);
 
   useEffect(() => {
-    const savedLanguage = window.localStorage.getItem("audiohub-language");
-
-    if (savedLanguage === "ENG" || savedLanguage === "SPN") {
-      setLanguage(savedLanguage);
-    }
-  }, []);
-
-  useEffect(() => {
     window.localStorage.setItem("audiohub-public-profile", String(publicProfile));
   }, [publicProfile]);
 
