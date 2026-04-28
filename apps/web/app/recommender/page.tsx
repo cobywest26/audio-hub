@@ -350,7 +350,7 @@ export default function RecommenderPage() {
             </div>
           ) : (
             <div style={{ fontSize: "13px", color: "#c5c6ca" }}>
-              No stored recommendations yet. Generate a mix to create and save one for this user.
+              Generate a mix to create and save one to listen to!
             </div>
           )}
         </div>

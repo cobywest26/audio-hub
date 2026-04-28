@@ -269,6 +269,21 @@ def empty_global_metrics() -> dict:
     }
 
 
+def get_latest_global_metrics() -> dict:
+    result = (
+        supabase.table("global_metrics")
+        .select("*")
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+
+    if not result.data:
+        return empty_global_metrics()
+
+    return result.data[0]
+
+
 def compute_global_metrics() -> dict:
     latest_snapshots = get_latest_snapshots_per_user()
 
@@ -300,6 +315,8 @@ def compute_global_metrics() -> dict:
 
     track_counter: Counter[str] = Counter()
     artist_counter: Counter[str] = Counter()
+    track_time_counter: dict[str, int] = defaultdict(int)
+    artist_time_counter: dict[str, int] = defaultdict(int)
 
     track_labels: dict[str, str] = {}
     
@@ -317,6 +334,7 @@ def compute_global_metrics() -> dict:
         if artist_name:
             unique_artists.add(artist_name)
             artist_counter[artist_name] += 1
+            artist_time_counter[artist_name] += ms_played
 
         # Prefer Spotify URI for identity; fall back to name+artist if URI is missing.
         track_key = track_uri or f"{track_name}::{artist_name}"
@@ -324,6 +342,7 @@ def compute_global_metrics() -> dict:
         if track_name or artist_name:
             unique_track_keys.add(track_key)
             track_counter[track_key] += 1
+            track_time_counter[track_key] += ms_played
 
             if track_key not in track_labels:
                 if track_name and artist_name:
@@ -354,17 +373,27 @@ def compute_global_metrics() -> dict:
     top_tracks = [
         {
             "name": track_labels.get(track_key, track_key),
-            "streams": count,
+            "streams": track_counter[track_key],
+            "total_ms_played": total_ms_played,
         }
-        for track_key, count in track_counter.most_common(10)
+        for track_key, total_ms_played in sorted(
+            track_time_counter.items(),
+            key=lambda item: item[1],
+            reverse=True,
+        )[:10]
     ]
 
     top_artists = [
         {
             "name": artist_name,
-            "streams": count,
+            "streams": artist_counter[artist_name],
+            "total_ms_played": total_ms_played,
         }
-        for artist_name, count in artist_counter.most_common(10)
+        for artist_name, total_ms_played in sorted(
+            artist_time_counter.items(),
+            key=lambda item: item[1],
+            reverse=True,
+        )[:10]
     ]
     #Added fields for tracking daytime, nighttime, weekday, and weekend listening time
     return {
@@ -382,3 +411,9 @@ def compute_global_metrics() -> dict:
         "weekday_ms": weekday_ms,
         "weekend_ms": weekend_ms,
     }
+
+
+def compute_and_save_global_metrics() -> dict:
+    metrics = compute_global_metrics()
+    supabase.table("global_metrics").insert(metrics).execute()
+    return metrics

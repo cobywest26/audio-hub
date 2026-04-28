@@ -9,7 +9,11 @@ from pydantic import BaseModel
 
 from app.core.auth import get_current_user_id
 from app.core.supabase_client import LISTENING_HISTORY_CONFLICT_COLUMNS, supabase
-from app.utils.metrics import compute_and_save_snapshot_metrics, compute_and_save_user_metrics
+from app.utils.metrics import (
+    compute_and_save_global_metrics,
+    compute_and_save_snapshot_metrics,
+    compute_and_save_user_metrics,
+)
 from app.utils.spotify_parser import parse_spotify_entry
 
 router = APIRouter(prefix="/upload", tags=["upload"])
@@ -209,6 +213,15 @@ async def upload_spotify_file(
         supabase.table("snapshots").update({
             "status": "ready",
         }).eq("id", snapshot_id).execute()
+
+        try:
+            compute_and_save_global_metrics()
+            logger.info("Saved global metrics after snapshot %s", snapshot_id)
+        except Exception:
+            logger.exception(
+                "Global metric refresh failed after snapshot %s",
+                snapshot_id,
+            )
 
         return {
             "message": "Upload processed successfully.",

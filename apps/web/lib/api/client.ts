@@ -43,8 +43,6 @@ export type SpotifyPlaylistExportResult = {
   external_urls?: {
     spotify?: string;
   };
-  snapshot: Snapshot | null;
-  metrics: Metrics | null;
 };
 
 export async function uploadSpotifyData(

@@ -44,6 +44,39 @@ class UpsertQuery:
         return SimpleNamespace(data=[])
 
 
+class InsertQuery:
+    def __init__(self) -> None:
+        self.insert_payloads: list[dict] = []
+
+    def insert(self, payload: dict):
+        self.insert_payloads.append(payload)
+        return self
+
+    def execute(self):
+        return SimpleNamespace(data=[])
+
+
+class LatestQuery:
+    def __init__(self, rows: list[dict]) -> None:
+        self.rows = rows
+        self.order_calls: list[tuple[str, bool]] = []
+        self.limit_calls: list[int] = []
+
+    def select(self, *_args, **_kwargs):
+        return self
+
+    def order(self, column: str, desc: bool = False):
+        self.order_calls.append((column, desc))
+        return self
+
+    def limit(self, count: int):
+        self.limit_calls.append(count)
+        return self
+
+    def execute(self):
+        return SimpleNamespace(data=self.rows)
+
+
 class FakeSupabase:
     def __init__(self, tables: dict[str, object]) -> None:
         self.tables = tables
@@ -178,6 +211,98 @@ class ComputeGlobalMetricsTests(unittest.TestCase):
         self.assertEqual(summary["night_ms"], 6000)
         self.assertEqual(summary["weekday_ms"], 3000)
         self.assertEqual(summary["weekend_ms"], 7000)
+
+    def test_compute_global_metrics_returns_time_weighted_top_lists(self) -> None:
+        rows = [
+            {
+                "ms_played": 1000,
+                "track_name": "Short Song",
+                "artist_name": "Artist A",
+                "spotify_track_uri": "spotify:track:short",
+                "played_at": "2024-06-10T11:00:00+00:00",
+            },
+            {
+                "ms_played": 9000,
+                "track_name": "Long Song",
+                "artist_name": "Artist B",
+                "spotify_track_uri": "spotify:track:long",
+                "played_at": "2024-06-10T12:00:00+00:00",
+            },
+            {
+                "ms_played": 8000,
+                "track_name": "Long Song",
+                "artist_name": "Artist B",
+                "spotify_track_uri": "spotify:track:long",
+                "played_at": "2024-06-10T13:00:00+00:00",
+            },
+        ]
+
+        with (
+            mock.patch.object(
+                metrics,
+                "get_latest_snapshots_per_user",
+                return_value=[{"id": "s1", "user_id": "u1"}],
+            ),
+            mock.patch.object(metrics, "fetch_global_history_rows", return_value=rows),
+        ):
+            summary = metrics.compute_global_metrics()
+
+        self.assertEqual(summary["top_tracks"][0]["name"], "Long Song - Artist B")
+        self.assertEqual(summary["top_tracks"][0]["streams"], 2)
+        self.assertEqual(summary["top_tracks"][0]["total_ms_played"], 17000)
+        self.assertEqual(summary["top_artists"][0]["name"], "Artist B")
+        self.assertEqual(summary["top_artists"][0]["streams"], 2)
+        self.assertEqual(summary["top_artists"][0]["total_ms_played"], 17000)
+
+
+class SavedGlobalMetricsTests(unittest.TestCase):
+    def test_get_latest_global_metrics_reads_newest_saved_row(self) -> None:
+        latest_query = LatestQuery([{"total_streams": 42, "top_tracks": []}])
+        fake_supabase = FakeSupabase({"global_metrics": latest_query})
+
+        with mock.patch.object(metrics, "supabase", fake_supabase):
+            result = metrics.get_latest_global_metrics()
+
+        self.assertEqual(result["total_streams"], 42)
+        self.assertEqual(latest_query.order_calls, [("created_at", True)])
+        self.assertEqual(latest_query.limit_calls, [1])
+
+    def test_get_latest_global_metrics_returns_empty_metrics_when_table_is_empty(self) -> None:
+        latest_query = LatestQuery([])
+        fake_supabase = FakeSupabase({"global_metrics": latest_query})
+
+        with mock.patch.object(metrics, "supabase", fake_supabase):
+            result = metrics.get_latest_global_metrics()
+
+        self.assertEqual(result, metrics.empty_global_metrics())
+
+    def test_compute_and_save_global_metrics_inserts_computed_metrics(self) -> None:
+        insert_query = InsertQuery()
+        fake_supabase = FakeSupabase({"global_metrics": insert_query})
+        computed = {
+            "total_streams": 7,
+            "total_ms_played": 123,
+            "unique_tracks": 3,
+            "unique_artists": 2,
+            "top_track": "Song",
+            "top_artist": "Artist",
+            "total_active_users": 1,
+            "top_tracks": [],
+            "top_artists": [],
+            "day_ms": 100,
+            "night_ms": 23,
+            "weekday_ms": 123,
+            "weekend_ms": 0,
+        }
+
+        with (
+            mock.patch.object(metrics, "supabase", fake_supabase),
+            mock.patch.object(metrics, "compute_global_metrics", return_value=computed),
+        ):
+            result = metrics.compute_and_save_global_metrics()
+
+        self.assertEqual(result, computed)
+        self.assertEqual(insert_query.insert_payloads, [computed])
 
 
 class FetchMetricRowsTests(unittest.TestCase):
