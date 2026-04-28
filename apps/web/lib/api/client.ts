@@ -1,141 +1,49 @@
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
-export type Recommendation = {
+export type RecommendationItem = {
+  rank: number;
   track_id: string;
   track_name: string | null;
   artists: string | null;
   genre: string | null;
-  popularity: number;
-  score: number;
-  source: string;
+  popularity: number | null;
+  score: number | null;
+  source: string | null;
+  reason: string | null;
+  spotify_uri?: string | null;
+  external_url?: string | null;
 };
 
-export type RecommenderResponse = {
+export type RecommendationBatch = {
+  id: string;
   user_id: string;
-  has_data: boolean;
-  coverage: {
-    total_interactions: number;
-    matched_interactions: number;
-    total_unique_tracks: number;
-    matched_unique_tracks: number;
-    match_rate: number;
-  };
-  recommendations: Recommendation[];
-};
-
-export type ProfileSearchResult = {
-  id: string;
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-};
-
-export type ProfileSearchResponse = {
-  results: ProfileSearchResult[];
-};
-
-export type Snapshot = {
-  id: string;
-  name: string | null;
+  strategy: string;
+  coverage: RecommendationCoverage;
   created_at: string;
-  status: string;
-  is_active: boolean;
 };
 
-export type RankedMetric = {
-  name: string;
-  streams: number;
-  total_ms_played: number;
+export type RecommendationCoverage = {
+  total_interactions: number;
+  matched_interactions: number;
+  total_unique_tracks: number;
+  matched_unique_tracks: number;
+  match_rate: number;
 };
 
-export type Metrics = {
-  total_streams: number;
-  total_ms_played: number;
-  unique_tracks: number;
-  unique_artists: number;
-  top_track: string | null;
-  top_artist: string | null;
-  top_tracks?: RankedMetric[];
-  top_artists?: RankedMetric[];
-  day_ms?: number;
-  night_ms?: number;
-  weekday_ms?: number;
-  weekend_ms?: number;
+export type RecommendationResponse = {
+  has_recommendations: boolean;
+  batch: RecommendationBatch | null;
+  recommendations: RecommendationItem[];
+  strategy?: string;
+  coverage?: RecommendationCoverage;
 };
 
-export type ProfileMetricsResponse = {
-  has_data: boolean;
-  profile: {
-    id: string;
-    username: string;
-    display_name: string | null;
-    avatar_url: string | null;
+export type SpotifyPlaylistExportResult = {
+  id: string;
+  external_urls?: {
+    spotify?: string;
   };
-  snapshot: Snapshot | null;
-  metrics: Metrics | null;
 };
-
-export async function searchProfiles(
-  accessToken: string,
-  query: string
-): Promise<ProfileSearchResponse> {
-  const response = await fetch(
-    `${API_BASE_URL}/profiles/search?q=${encodeURIComponent(query)}`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  );
-
-  if (!response.ok) {
-    const raw = await response.text();
-    throw new Error(`Failed to search profiles: ${raw}`);
-  }
-
-  return response.json();
-}
-
-export async function getProfileByUsername(
-  accessToken: string,
-  username: string
-): Promise<ProfileMetricsResponse> {
-  const response = await fetch(
-    `${API_BASE_URL}/profiles/${encodeURIComponent(username)}`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  );
-
-  if (!response.ok) {
-    const raw = await response.text();
-    throw new Error(`Failed to load profile: ${raw}`);
-  }
-
-  return response.json();
-}
-
-export async function getRecommendations(
-  accessToken: string,
-  limit = 20
-): Promise<RecommenderResponse> {
-  const response = await fetch(`${API_BASE_URL}/recommender/me?limit=${limit}`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-
-  const raw = await response.text();
-
-  if (!response.ok) {
-    console.error("Recommender API error:", raw);
-    throw new Error(`Failed to fetch recommendations: ${raw}`);
-  }
-
-  return JSON.parse(raw);
-}
 
 export async function uploadSpotifyData(
   file: File,
@@ -177,18 +85,20 @@ export async function getLatestMetrics(accessToken: string) {
   return data;
 }
 
-export async function getRecommenderDebug(accessToken: string) {
-  const response = await fetch(`${API_BASE_URL}/recommender/debug`, {
+export async function getProfileMetrics(accessToken: string) {
+  const response = await fetch(`${API_BASE_URL}/metrics/me`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
   });
 
+  const data = await response.json();
+
   if (!response.ok) {
-    throw new Error(`Debug request failed: ${response.status}`);
+    throw new Error(data.detail || "Failed to fetch profile metrics.");
   }
 
-  return response.json();
+  return data;
 }
 
 export async function getSnapshots(accessToken: string) {
@@ -202,22 +112,6 @@ export async function getSnapshots(accessToken: string) {
 
   if (!response.ok) {
     throw new Error(data.detail || "Failed to fetch snapshots.");
-  }
-
-  return data;
-}
-
-export async function getSnapshotMetrics(accessToken: string, snapshotId: string) {
-  const response = await fetch(`${API_BASE_URL}/metrics/snapshot/${snapshotId}`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.detail || "Failed to fetch snapshot metrics.");
   }
 
   return data;
@@ -278,6 +172,115 @@ export async function getGlobalMetrics(accessToken: string) {
 
   if (!response.ok) {
     throw new Error(data.detail || "Failed to fetch global metrics.");
+  }
+
+  return data;
+}
+
+export async function getMyRecommendations(
+  accessToken: string
+): Promise<RecommendationResponse> {
+  const response = await fetch(`${API_BASE_URL}/recommender/me`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.detail || "Failed to fetch recommendations.");
+  }
+
+  return data;
+}
+
+export async function generateRecommendations(
+  accessToken: string,
+  options: {
+    limit?: number;
+    useExternalDiscovery?: boolean;
+    useLightfmRerank?: boolean;
+  } = {}
+): Promise<RecommendationResponse> {
+  const params = new URLSearchParams();
+
+  if (options.limit) {
+    params.set("limit", String(options.limit));
+  }
+  if (typeof options.useExternalDiscovery === "boolean") {
+    params.set("use_external_discovery", String(options.useExternalDiscovery));
+  }
+  if (typeof options.useLightfmRerank === "boolean") {
+    params.set("use_lightfm_rerank", String(options.useLightfmRerank));
+  }
+
+  const response = await fetch(`${API_BASE_URL}/recommender/generate?${params.toString()}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.detail || "Failed to generate recommendations.");
+  }
+
+  return data;
+}
+
+export async function createSpotifyPlaylist(
+  providerToken: string,
+  options: {
+    name: string;
+    description?: string;
+    public?: boolean;
+  }
+): Promise<SpotifyPlaylistExportResult> {
+  const response = await fetch("https://api.spotify.com/v1/me/playlists", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${providerToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: options.name,
+      description: options.description ?? "",
+      public: options.public ?? false,
+    }),
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(data?.error?.message || "Failed to create Spotify playlist.");
+  }
+
+  return data;
+}
+
+export async function addTracksToSpotifyPlaylist(
+  providerToken: string,
+  playlistId: string,
+  trackUris: string[]
+) {
+  const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/items`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${providerToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      uris: trackUris,
+    }),
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(data?.error?.message || "Failed to add tracks to Spotify playlist.");
   }
 
   return data;
