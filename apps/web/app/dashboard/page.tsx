@@ -445,7 +445,7 @@ export default function DashboardPage() {
       setCompareSnapshotId(snapshotId);
       setCompareData({
         current: metrics,
-        previous: previousResponse.metrics,
+        previous: previousResponse,
       });
       setModal("compare");
     } catch (error) {

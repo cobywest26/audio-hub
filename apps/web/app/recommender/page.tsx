@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { getSupabaseBrowserClient, signOutUser } from "@/lib/supabase/client";
+import { t, type AppLanguage, type TranslationKey } from "@/lib/i18n";
 import {
   addTracksToSpotifyPlaylist,
   createSpotifyPlaylist,
@@ -42,6 +43,12 @@ export default function RecommenderPage() {
   const [pageError, setPageError] = useState<string | null>(null);
   const [playlistName, setPlaylistName] = useState("AudioHub Mix");
   const [exportSuccessUrl, setExportSuccessUrl] = useState<string | null>(null);
+  const [language, setLanguage] = useState<AppLanguage>("ENG");
+
+  const translate = (
+    key: TranslationKey,
+    vars?: Record<string, string | number>
+  ) => t(language, key, vars);
 
   useEffect(() => {
     async function loadPage() {
@@ -84,6 +91,14 @@ export default function RecommenderPage() {
 
     loadPage();
   }, [router]);
+
+  useEffect(() => {
+    const savedLanguage = window.localStorage.getItem("audiohub-language");
+
+    if (savedLanguage === "ENG" || savedLanguage === "SPN") {
+      setLanguage(savedLanguage);
+    }
+  }, []);
 
   useEffect(() => {
     window.localStorage.setItem("audiohub-public-profile", String(publicProfile));
@@ -200,8 +215,6 @@ export default function RecommenderPage() {
   return (
     <AppShell
       username={username}
-      //publicProfile={publicProfile}
-      //onTogglePublic={() => setPublicProfile((current) => !current)}
       onSnapshots={() => router.push("/dashboard")}
       onReset={() => router.push("/upload")}
       onLogout={handleLogout}
@@ -209,6 +222,12 @@ export default function RecommenderPage() {
       onProfile={() => router.push("/dashboard")}
       onRecommender={() => router.push("/recommender")}
       onGlobe={() => router.push("/global-board")}
+      language={language}
+      onLanguageChange={(nextLanguage) => {
+        setLanguage(nextLanguage);
+        window.localStorage.setItem("audiohub-language", nextLanguage);
+      }}
+      translate={translate}
     >
       <section className="audiohub-section">
         <div className="audiohub-section-title audiohub-gradient-title">

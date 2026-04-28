@@ -20,14 +20,54 @@ import { getSupabaseBrowserClient, signOutUser } from "@/lib/supabase/client";
 import {
   getProfileByUsername,
   searchProfiles,
-  type ProfileMetricsResponse,
-  type Metrics,
 } from "@/lib/api/client";
 import { t, type AppLanguage, type TranslationKey } from "@/lib/i18n";
 
 // Shared chart color palette for profile visualizations.
 // AI-assisted note: keep this in sync with dashboard colors or move both to a shared constants file.
 const COLORS = ["#C64B8C", "#FD3DB5", "#DE73FF", "#B65FCF"];
+
+type RankedMetric = {
+  name: string;
+  streams: number;
+  total_ms_played: number;
+};
+
+type Metrics = {
+  total_streams: number;
+  total_ms_played: number;
+  unique_tracks: number;
+  unique_artists: number;
+  top_track: string | null;
+  top_artist: string | null;
+  top_tracks?: RankedMetric[];
+  top_artists?: RankedMetric[];
+};
+
+type ProfileMetricsResponse = {
+  has_data: boolean;
+  profile: {
+    id: string;
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  };
+  snapshot: {
+    id: string;
+    name: string | null;
+    created_at: string;
+    status: string;
+    is_active: boolean;
+  } | null;
+  metrics: Metrics | null;
+};
+
+type SearchProfileResult = {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+};
 
 // Converts Spotify listening duration from milliseconds into rounded hours.
 function msToHours(ms: number) {
@@ -81,7 +121,7 @@ export default function ProfilePage() {
   const [signingOut, setSigningOut] = useState(false);
 
   const [searchValue, setSearchValue] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchProfileResult[]>([]);
   const [searchEmpty, setSearchEmpty] = useState(false);
 
   const [artistChartType, setArtistChartType] = useState<"bar" | "pie">("bar");
@@ -269,7 +309,7 @@ if (!profileData || !metrics) {
                     itemStyle={{ color: "#f5f5f5" }}
                   />
                   <Bar dataKey="hours">
-                    {artistData.map((_, i) => (
+                    {artistData.map((_: { name: string; hours: number }, i: number) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Bar>
@@ -277,7 +317,7 @@ if (!profileData || !metrics) {
               ) : (
                 <PieChart>
                   <Pie data={artistData} dataKey="hours">
-                    {artistData.map((_, i) => (
+                    {artistData.map((_: { name: string; hours: number }, i: number) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Pie>
@@ -327,7 +367,7 @@ if (!profileData || !metrics) {
                     itemStyle={{ color: "#f5f5f5" }}
                   />
                   <Bar dataKey="streams">
-                    {trackData.map((_, i) => (
+                    {trackData.map((_: { name: string; streams: number }, i: number) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Bar>
@@ -335,7 +375,7 @@ if (!profileData || !metrics) {
               ) : (
                 <PieChart>
                   <Pie data={trackData} dataKey="streams">
-                    {trackData.map((_, i) => (
+                    {trackData.map((_: { name: string; streams: number }, i: number) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Pie>

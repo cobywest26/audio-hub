@@ -106,15 +106,19 @@ def get_snapshot_metrics(snapshot_id: str, user_id: str = Depends(get_current_us
         .select("*")
         .eq("snapshot_id", snapshot_id)
         .eq("user_id", user_id)
-        .single()
+        .limit(1)
         .execute()
     )
 
-    if not result.data:
+    if result.data:
+        return {"metrics": result.data[0]}
+
+    metrics = compute_and_save_snapshot_metrics(user_id, snapshot_id)
+
+    if not metrics:
         raise HTTPException(status_code=404, detail="Snapshot metrics not found")
 
-    return {"metrics": result.data}
-
+    return {"metrics": metrics}
 
 @router.get("/global")
 def get_global_metrics(user_id: str = Depends(get_current_user_id)):
