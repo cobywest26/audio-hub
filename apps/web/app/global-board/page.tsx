@@ -71,17 +71,23 @@ function buildTrackChartData(metrics: GlobalMetrics) {
     }));
 }
 
-function buildDayNightChartData(metrics: GlobalMetrics) {
+function buildDayNightChartData(
+  metrics: GlobalMetrics,
+  translate: (key: TranslationKey) => string
+) {
   return [
-    { name: "Day", value: msToHours(metrics.day_ms ?? 0) },
-    { name: "Night", value: msToHours(metrics.night_ms ?? 0) },
+    { name: translate("day"), value: msToHours(metrics.day_ms ?? 0) },
+    { name: translate("night"), value: msToHours(metrics.night_ms ?? 0) },
   ];
 }
 
-function buildWeekWeekendChartData(metrics: GlobalMetrics) {
+function buildWeekWeekendChartData(
+  metrics: GlobalMetrics,
+  translate: (key: TranslationKey) => string
+) {
   return [
-    { name: "Weekday", value: msToHours(metrics.weekday_ms ?? 0) },
-    { name: "Weekend", value: msToHours(metrics.weekend_ms ?? 0) },
+    { name: translate("weekday"), value: msToHours(metrics.weekday_ms ?? 0) },
+    { name: translate("weekend"), value: msToHours(metrics.weekend_ms ?? 0) },
   ];
 }
 
@@ -162,12 +168,12 @@ export default function GlobalBoardPage() {
     [metrics]
   );
   const dayNightChartData = useMemo(
-    () => (metrics ? buildDayNightChartData(metrics) : []),
-    [metrics]
+    () => (metrics ? buildDayNightChartData(metrics, translate) : []),
+    [metrics, translate]
   );
   const weekWeekendChartData = useMemo(
-    () => (metrics ? buildWeekWeekendChartData(metrics) : []),
-    [metrics]
+    () => (metrics ? buildWeekWeekendChartData(metrics, translate) : []),
+    [metrics, translate]
   );
 
   const dn = {
@@ -187,7 +193,7 @@ export default function GlobalBoardPage() {
   if (!metrics || metrics.total_streams === 0) {
     return (
       <main className="audiohub-home-loading">
-        No global listening data is available yet.
+        {translate("no_global_data")}
       </main>
     );
   }
@@ -195,7 +201,7 @@ export default function GlobalBoardPage() {
   return (
     <AppShell
       username={username}
-      profileLabel="Global Board"
+      profileLabel={translate("global_board")}
       onSnapshots={() => router.push("/dashboard")}
       onReset={() => router.push("/upload")}
       onLogout={handleLogout}
@@ -209,50 +215,50 @@ export default function GlobalBoardPage() {
     >
       <section className="audiohub-section">
         <div className="audiohub-section-title audiohub-gradient-title">
-          Global Highlights
+          {translate("global_highlights")}
         </div>
 
         <div className="audiohub-report-grid">
           <div className="audiohub-report-card">
-            <div className="audiohub-report-key">Active Users</div>
+            <div className="audiohub-report-key">{translate("active_users")}</div>
             <div className="audiohub-report-value">
               {metrics.total_active_users.toLocaleString()}
             </div>
           </div>
           <div className="audiohub-report-card">
-            <div className="audiohub-report-key">Total Streams</div>
+            <div className="audiohub-report-key">{translate("total_streams_label")}</div>
             <div className="audiohub-report-value">
               {metrics.total_streams.toLocaleString()}
             </div>
           </div>
           <div className="audiohub-report-card">
-            <div className="audiohub-report-key">Listening Time</div>
+            <div className="audiohub-report-key">{translate("time_listened")}</div>
             <div className="audiohub-report-value">
-              {totalHours.toLocaleString()} hours
+              {totalHours.toLocaleString()} {translate("hours")}
             </div>
           </div>
           <div className="audiohub-report-card">
-            <div className="audiohub-report-key">Unique Tracks</div>
+            <div className="audiohub-report-key">{translate("unique_tracks_label")}</div>
             <div className="audiohub-report-value">
               {metrics.unique_tracks.toLocaleString()}
             </div>
           </div>
           <div className="audiohub-report-card">
-            <div className="audiohub-report-key">Unique Artists</div>
+            <div className="audiohub-report-key">{translate("unique_artists_label")}</div>
             <div className="audiohub-report-value">
               {metrics.unique_artists.toLocaleString()}
             </div>
           </div>
           <div className="audiohub-report-card">
-            <div className="audiohub-report-key">Top Track</div>
+            <div className="audiohub-report-key">{translate("top_track")}</div>
             <div className="audiohub-report-value">
-              {metrics.top_track || "Unknown Track"}
+              {metrics.top_track || translate("unknown_track")}
             </div>
           </div>
           <div className="audiohub-report-card">
-            <div className="audiohub-report-key">Top Artist</div>
+            <div className="audiohub-report-key">{translate("top_artist")}</div>
             <div className="audiohub-report-value">
-              {metrics.top_artist || "Unknown Artist"}
+              {metrics.top_artist || translate("unknown_artist")}
             </div>
           </div>
         </div>
@@ -260,14 +266,14 @@ export default function GlobalBoardPage() {
 
       <section className="audiohub-section">
         <div className="audiohub-section-title audiohub-gradient-title">
-          Community Listening
+          {translate("global_community_listening")}
         </div>
 
         <div className="audiohub-viz-rows">
           <div className="audiohub-viz-row audiohub-viz-row--triple">
             <section className="audiohub-card">
               <div className="audiohub-viz-card-header">
-                <div className="audiohub-card-title">Top Artists</div>
+                <div className="audiohub-card-title">{translate("top_artists")}</div>
                 <button
                   type="button"
                   className="audiohub-toggle-chip"
@@ -275,7 +281,7 @@ export default function GlobalBoardPage() {
                     setArtistChartType((current) => (current === "bar" ? "pie" : "bar"))
                   }
                 >
-                  {artistChartType === "bar" ? "Bar Chart" : "Pie Chart"}
+                  {artistChartType === "bar" ? translate("bar_chart") : translate("pie_chart")}
                 </button>
               </div>
 
@@ -288,8 +294,8 @@ export default function GlobalBoardPage() {
                       <YAxis tick={{ fill: "#f5f5f5", fontSize: 11 }} />
                       <Tooltip
                         formatter={(value, _name, props) => [
-                          `${value} hours`,
-                          props.payload?.name ?? "Artist",
+                          `${value} ${translate("hours")}`,
+                          props.payload?.name ?? translate("artist_label"),
                         ]}
                         labelFormatter={() => ""}
                         contentStyle={{
@@ -327,8 +333,8 @@ export default function GlobalBoardPage() {
                       </Pie>
                       <Tooltip
                         formatter={(value, _name, props) => [
-                          `${value} hours`,
-                          props.payload?.name ?? "Artist",
+                          `${value} ${translate("hours")}`,
+                          props.payload?.name ?? translate("artist_label"),
                         ]}
                         contentStyle={{
                           background: "#0d0d0f",
@@ -345,7 +351,7 @@ export default function GlobalBoardPage() {
 
             <section className="audiohub-card">
               <div className="audiohub-list-box">
-                <div className="audiohub-card-title">Top Artists</div>
+                <div className="audiohub-card-title">{translate("top_artists")}</div>
                 {artistChartData.map((artist, index) => (
                   <div key={artist.name} className="audiohub-list-row">
                     <div className="audiohub-list-num">{index + 1}.</div>
@@ -357,11 +363,11 @@ export default function GlobalBoardPage() {
 
             <section className="audiohub-card">
               <div className="audiohub-list-box">
-                <div className="audiohub-card-title">Time Listened</div>
+                <div className="audiohub-card-title">{translate("time_listened")}</div>
                 {artistChartData.map((artist, index) => (
                   <div key={`${artist.name}-${index}`} className="audiohub-list-row">
                     <div className="audiohub-list-num">{index + 1}.</div>
-                    <div className="audiohub-list-text">{artist.hours} hours</div>
+                    <div className="audiohub-list-text">{artist.hours} {translate("hours")}</div>
                   </div>
                 ))}
               </div>
@@ -371,7 +377,7 @@ export default function GlobalBoardPage() {
           <div className="audiohub-viz-row audiohub-viz-row--triple">
             <section className="audiohub-card">
               <div className="audiohub-viz-card-header">
-                <div className="audiohub-card-title">Top Tracks</div>
+                <div className="audiohub-card-title">{translate("top_tracks")}</div>
                 <button
                   type="button"
                   className="audiohub-toggle-chip"
@@ -379,7 +385,7 @@ export default function GlobalBoardPage() {
                     setTrackChartType((current) => (current === "bar" ? "pie" : "bar"))
                   }
                 >
-                  {trackChartType === "bar" ? "Bar Chart" : "Pie Chart"}
+                  {trackChartType === "bar" ? translate("bar_chart") : translate("pie_chart")}
                 </button>
               </div>
 
@@ -399,8 +405,8 @@ export default function GlobalBoardPage() {
                       />
                       <Tooltip
                         formatter={(value, _name, props) => [
-                          `${value} replays`,
-                          props.payload?.name ?? "Track",
+                          `${value} ${translate("replays")}`,
+                          props.payload?.name ?? translate("track_label"),
                         ]}
                         labelFormatter={() => ""}
                         contentStyle={{
@@ -438,8 +444,8 @@ export default function GlobalBoardPage() {
                       </Pie>
                       <Tooltip
                         formatter={(value, _name, props) => [
-                          `${value} replays`,
-                          props.payload?.name ?? "Track",
+                          `${value} ${translate("replays")}`,
+                          props.payload?.name ?? translate("track_label"),
                         ]}
                         contentStyle={{
                           background: "#0d0d0f",
@@ -456,7 +462,7 @@ export default function GlobalBoardPage() {
 
             <section className="audiohub-card">
               <div className="audiohub-list-box">
-                <div className="audiohub-card-title">Top Tracks</div>
+                <div className="audiohub-card-title">{translate("top_tracks")}</div>
                 {trackChartData.map((track, index) => (
                   <div key={track.name} className="audiohub-list-row">
                     <div className="audiohub-list-num">{index + 1}.</div>
@@ -468,11 +474,11 @@ export default function GlobalBoardPage() {
 
             <section className="audiohub-card">
               <div className="audiohub-list-box">
-                <div className="audiohub-card-title">Times Replayed</div>
+                <div className="audiohub-card-title">{translate("times_replayed")}</div>
                 {trackChartData.map((track, index) => (
                   <div key={`${track.name}-${index}`} className="audiohub-list-row">
                     <div className="audiohub-list-num">{index + 1}.</div>
-                    <div className="audiohub-list-text">{track.streams} replays</div>
+                    <div className="audiohub-list-text">{track.streams} {translate("replays")}</div>
                   </div>
                 ))}
               </div>
@@ -482,7 +488,7 @@ export default function GlobalBoardPage() {
           <div className="audiohub-viz-row audiohub-viz-row--double">
             <section className="audiohub-card">
               <div className="audiohub-viz-card-header">
-                <div className="audiohub-card-title">Day vs. Night Listening</div>
+                <div className="audiohub-card-title">{translate("day_night")}</div>
                 <button
                   type="button"
                   className="audiohub-toggle-chip"
@@ -490,7 +496,7 @@ export default function GlobalBoardPage() {
                     setDayNightChartType((current) => (current === "bar" ? "pie" : "bar"))
                   }
                 >
-                  {dayNightChartType === "bar" ? "Bar Chart" : "Pie Chart"}
+                  {dayNightChartType === "bar" ? translate("bar_chart") : translate("pie_chart")}
                 </button>
               </div>
               <div className="audiohub-chart-panel">
@@ -535,19 +541,19 @@ export default function GlobalBoardPage() {
 
             <section className="audiohub-card audiohub-vs-panel">
               <div>
-                <div className="audiohub-vs-row-title">Day v Night Listening</div>
+                <div className="audiohub-vs-row-title">{translate("day_night")}</div>
                 <div className="audiohub-vs-row">
                   <div className="audiohub-vs-box">
                     <div>
-                      <div className="audiohub-vs-label">Day</div>
-                      <div className="audiohub-vs-value">{dn.day} hrs</div>
+                      <div className="audiohub-vs-label">{translate("day")}</div>
+                      <div className="audiohub-vs-value">{dn.day} {translate("hours")}</div>
                     </div>
                   </div>
-                  <div className="audiohub-vs-mid">vs.</div>
+                  <div className="audiohub-vs-mid">{translate("versus")}</div>
                   <div className="audiohub-vs-box">
                     <div>
-                      <div className="audiohub-vs-label">Night</div>
-                      <div className="audiohub-vs-value">{dn.night} hrs</div>
+                      <div className="audiohub-vs-label">{translate("night")}</div>
+                      <div className="audiohub-vs-value">{dn.night} {translate("hours")}</div>
                     </div>
                   </div>
                 </div>
@@ -558,7 +564,7 @@ export default function GlobalBoardPage() {
           <div className="audiohub-viz-row audiohub-viz-row--double">
             <section className="audiohub-card">
               <div className="audiohub-viz-card-header">
-                <div className="audiohub-card-title">Weekend vs. Weekday Listening</div>
+                <div className="audiohub-card-title">{translate("weekend_week")}</div>
                 <button
                   type="button"
                   className="audiohub-toggle-chip"
@@ -566,7 +572,7 @@ export default function GlobalBoardPage() {
                     setWeekChartType((current) => (current === "bar" ? "pie" : "bar"))
                   }
                 >
-                  {weekChartType === "bar" ? "Bar Chart" : "Pie Chart"}
+                  {weekChartType === "bar" ? translate("bar_chart") : translate("pie_chart")}
                 </button>
               </div>
               <div className="audiohub-chart-panel">
@@ -611,19 +617,19 @@ export default function GlobalBoardPage() {
 
             <section className="audiohub-card audiohub-vs-panel">
               <div>
-                <div className="audiohub-vs-row-title">Weekend v Weekday Listening</div>
+                <div className="audiohub-vs-row-title">{translate("weekend_week")}</div>
                 <div className="audiohub-vs-row">
                   <div className="audiohub-vs-box">
                     <div>
-                      <div className="audiohub-vs-label">Weekday</div>
-                      <div className="audiohub-vs-value">{ww.week} hrs</div>
+                      <div className="audiohub-vs-label">{translate("weekday")}</div>
+                      <div className="audiohub-vs-value">{ww.week} {translate("hours")}</div>
                     </div>
                   </div>
-                  <div className="audiohub-vs-mid">vs.</div>
+                  <div className="audiohub-vs-mid">{translate("versus")}</div>
                   <div className="audiohub-vs-box">
                     <div>
-                      <div className="audiohub-vs-label">Weekend</div>
-                      <div className="audiohub-vs-value">{ww.weekend} hrs</div>
+                      <div className="audiohub-vs-label">{translate("weekend")}</div>
+                      <div className="audiohub-vs-value">{ww.weekend} {translate("hours")}</div>
                     </div>
                   </div>
                 </div>

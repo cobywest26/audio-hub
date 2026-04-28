@@ -102,11 +102,11 @@ function buildTrackData(metrics: Metrics) {
 }
 
 // Assigns a listener archetype based on total listening hours.
-function getArchetype(hours: number) {
-  if (hours < 500) return "Novice Listener";
-  if (hours < 2500) return "Music Guru";
-  if (hours < 5000) return "DJ";
-  return "Expert";
+function getArchetype(hours: number, translate: (key: TranslationKey) => string) {
+  if (hours < 500) return translate("novice_listener");
+  if (hours < 2500) return translate("music_guru");
+  if (hours < 5000) return translate("dj");
+  return translate("expert");
 }
 
 export default function ProfilePage() {
@@ -205,7 +205,7 @@ export default function ProfilePage() {
 
   const metrics = profileData?.metrics ?? null;
   const totalHours = metrics ? msToHours(metrics.total_ms_played) : 0;
-  const archetype = getArchetype(totalHours);
+  const archetype = getArchetype(totalHours, translate);
 
   // Memoizes chart data so it only rebuilds when profile metrics change.
   const artistData = useMemo(
@@ -290,7 +290,7 @@ if (!profileData || !metrics) {
                   <XAxis dataKey="name" hide />
                   <YAxis />
                   <Tooltip
-                    formatter={(value, _name, props) => [`${value}${translate("hours")}`, props.payload?.name ?? "Artist"]}
+                    formatter={(value, _name, props) => [`${value} ${translate("hours")}`, props.payload?.name ?? translate("artist_label")]}
                     labelFormatter={() => ""}
                     contentStyle={{
                       background: "#0d0d0f",
@@ -313,7 +313,7 @@ if (!profileData || !metrics) {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value, _name, props) => [`${value} hrs`, props.payload?.name ?? "Artist"]}
+                    formatter={(value, _name, props) => [`${value} ${translate("hours")}`, props.payload?.name ?? translate("artist_label")]}
                     labelFormatter={() => ""}
                     contentStyle={{
                       background: "#0d0d0f",
@@ -346,8 +346,8 @@ if (!profileData || !metrics) {
                   <YAxis dataKey="name" type="category" hide />
                   <Tooltip
                     formatter={(value, _name, props) => [
-                      `${value} replays`,
-                      props.payload?.name ?? "Track",
+                      `${value} ${translate("replays")}`,
+                      props.payload?.name ?? translate("track_label"),
                     ]}
                     labelFormatter={() => ""}
                     contentStyle={{
@@ -372,8 +372,8 @@ if (!profileData || !metrics) {
                   </Pie>
                   <Tooltip
                     formatter={(value, _name, props) => [
-                      `${value} replays`,
-                      props.payload?.name ?? "Track",
+                      `${value} ${translate("replays")}`,
+                      props.payload?.name ?? translate("track_label"),
                     ]}
                     labelFormatter={() => ""}
                     contentStyle={{
@@ -402,30 +402,30 @@ if (!profileData || !metrics) {
             </div>
 
             <div className="audiohub-report-card">
-              <div className="audiohub-report-key">Top Artist</div>
+              <div className="audiohub-report-key">{translate("top_artist")}</div>
               <div className="audiohub-report-value">
-                {metrics.top_artist || "Unknown Artist"}
+                {metrics.top_artist || translate("unknown_artist")}
               </div>
             </div>
 
             <div className="audiohub-report-card">
-              <div className="audiohub-report-key">Top Song</div>
+              <div className="audiohub-report-key">{translate("top_song")}</div>
               <div className="audiohub-report-value">
-                {metrics.top_track || "Unknown Track"}
+                {metrics.top_track || translate("unknown_track")}
               </div>
             </div>
 
             <div className="audiohub-report-card">
-              <div className="audiohub-report-key">Times Replayed</div>
+              <div className="audiohub-report-key">{translate("times_replayed")}</div>
               <div className="audiohub-report-value">
                 {Math.max(12, Math.round(metrics.total_streams / 7))}
               </div>
             </div>
 
             <div className="audiohub-report-card">
-              <div className="audiohub-report-key">Listening Time</div>
+              <div className="audiohub-report-key">{translate("time_listened")}</div>
               <div className="audiohub-report-value">
-                {totalHours.toLocaleString()} hours
+                {totalHours.toLocaleString()} {translate("hours")}
               </div>
             </div>
           </div>

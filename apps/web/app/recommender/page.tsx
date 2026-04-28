@@ -50,7 +50,7 @@ export default function RecommenderPage() {
   const [generating, setGenerating] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
-  const [playlistName, setPlaylistName] = useState("AudioHub Mix");
+  const [playlistName, setPlaylistName] = useState("");
   const [exportSuccessUrl, setExportSuccessUrl] = useState<string | null>(null);
   const [language, setLanguage] = useState<AppLanguage>("ENG");
 
@@ -92,7 +92,7 @@ export default function RecommenderPage() {
         setRecommendationState(recommendations);
       } catch (error) {
         console.error("Failed to load recommender data:", error);
-        setPageError(error instanceof Error ? error.message : "Failed to load recommender data.");
+        setPageError(error instanceof Error ? error.message : translate("failed_load_recommender"));
       } finally {
         setLoading(false);
       }
@@ -141,7 +141,7 @@ export default function RecommenderPage() {
       setRecommendationState(response);
     } catch (error) {
       console.error("Failed to generate recommendations:", error);
-      setPageError(error instanceof Error ? error.message : "Failed to generate recommendations.");
+      setPageError(error instanceof Error ? error.message : translate("failed_generate_recommendations"));
     } finally {
       setGenerating(false);
     }
@@ -179,12 +179,12 @@ export default function RecommenderPage() {
         .filter((value): value is string => Boolean(value));
 
       if (trackUris.length === 0) {
-        throw new Error("No Spotify track URIs are available to export.");
+        throw new Error(translate("no_exportable_tracks"));
       }
 
       const playlist = await createSpotifyPlaylist(session.provider_token, {
-        name: playlistName.trim() || "AudioHub Mix",
-        description: "Created by AudioHub from your generated recommendations.",
+        name: playlistName.trim() || translate("playlist_default_name"),
+        description: translate("playlist_description"),
         public: false,
       });
 
@@ -192,7 +192,7 @@ export default function RecommenderPage() {
       setExportSuccessUrl(playlist.external_urls?.spotify || null);
     } catch (error) {
       console.error("Failed to export playlist:", error);
-      setPageError(error instanceof Error ? error.message : "Failed to export playlist.");
+      setPageError(error instanceof Error ? error.message : translate("failed_export_playlist"));
     } finally {
       setExporting(false);
     }
@@ -257,7 +257,7 @@ export default function RecommenderPage() {
                 cursor: generating ? "progress" : "pointer",
               }}
             >
-              {generating ? "Generating..." : hasRecommendations ? translate("refresh_mix") : translate("generate_mix")}
+              {generating ? translate("generating") : hasRecommendations ? translate("refresh_mix") : translate("generate_mix")}
             </button>
           </div>
 
@@ -300,10 +300,10 @@ export default function RecommenderPage() {
                   >
                     <div>
                       <div style={{ fontSize: "15px", fontWeight: 700 }}>
-                        {item.track_name || "Unknown track"}
+                        {item.track_name || translate("unknown_track")}
                       </div>
                       <div style={{ fontSize: "13px", color: "#c5c6ca", marginTop: "4px" }}>
-                        {item.artists || "Unknown artist"}
+                        {item.artists || translate("unknown_artist")}
                       </div>
                     </div>
                     <div
@@ -327,12 +327,12 @@ export default function RecommenderPage() {
                       color: "#9ea1a8",
                     }}
                   >
-                    <span>{translate("genre")}: {item.genre || "Unknown"}</span>
+                    <span>{translate("genre")}: {item.genre || translate("unknown_value")}</span>
                     <span>
-                      {translate("popularity")}: {typeof item.popularity === "number" ? item.popularity : "N/A"}
+                      {translate("popularity")}: {typeof item.popularity === "number" ? item.popularity : translate("not_available")}
                     </span>
                     <span>
-                      {translate("score")}: {typeof item.score === "number" ? item.score.toFixed(3) : "External"}
+                      {translate("score")}: {typeof item.score === "number" ? item.score.toFixed(3) : translate("external_value")}
                     </span>
                     {item.track_id ? (
                       <a
@@ -350,7 +350,7 @@ export default function RecommenderPage() {
             </div>
           ) : (
             <div style={{ fontSize: "13px", color: "#c5c6ca" }}>
-              Generate a mix to create and save one to listen to!
+              {translate("create_mix_prompt")}
             </div>
           )}
         </div>
@@ -378,7 +378,7 @@ export default function RecommenderPage() {
               className="audiohub-small-input"
               value={playlistName}
               onChange={(event) => setPlaylistName(event.target.value)}
-              placeholder="AudioHub Mix"
+              placeholder={translate("playlist_default_name")}
             />
             <button
               type="button"
@@ -390,20 +390,20 @@ export default function RecommenderPage() {
                 cursor: exporting || !hasRecommendations || !playlistName.trim() ? "not-allowed" : "pointer",
               }}
             >
-              {exporting ? "Exporting..." : translate("export_to_spotify")}
+              {exporting ? translate("exporting") : translate("export_to_spotify")}
             </button>
           </div>
 
           {exportSuccessUrl ? (
             <div style={{ fontSize: "13px", color: "#d9f7c8", marginTop: "14px" }}>
-              Playlist exported successfully.{" "}
+              {translate("playlist_export_success")}{" "}
               <a
                 href={exportSuccessUrl}
                 target="_blank"
                 rel="noreferrer"
                 style={{ color: "#ffb34d", textDecoration: "none" }}
               >
-                Open it in Spotify
+                {translate("open_playlist_spotify")}
               </a>
             </div>
           ) : null}

@@ -96,7 +96,7 @@ export function AppShell({
               <input
                 type="text"
                 className="audiohub-search-input"
-                placeholder="Search users..."
+                placeholder={translate("search_users")}
                 value={searchValue ?? ""}
                 onChange={(e) => onSearchChange?.(e.target.value)}
               />
@@ -120,7 +120,7 @@ export function AppShell({
                       </button>
                     ))
                   ) : (
-                    <div className="audiohub-search-empty">Nothing found</div>
+                    <div className="audiohub-search-empty">{translate("nothing_found")}</div>
                   )}
                 </div>
               ) : null}
@@ -131,12 +131,12 @@ export function AppShell({
               type="button"
               className="audiohub-icon-btn"
               onClick={onRecommender}
-              aria-label="Recommender"
-              title="Recommender"
+              aria-label={translate("recommender_nav")}
+              title={translate("recommender_nav")}
             >
               <Image
                 src="/recommender-icon.png"
-                alt="Recommender"
+                alt={translate("recommender_nav")}
                 width={22}
                 height={22}
                 className="audiohub-nav-icon"
@@ -147,12 +147,12 @@ export function AppShell({
               type="button"
               className="audiohub-icon-btn"
               onClick={onGlobe}
-              aria-label="Global Insights"
-              title="Global Insights"
+              aria-label={translate("global_insights")}
+              title={translate("global_insights")}
             >
               <Image
                 src="/globe.svg"
-                alt="Global Insights"
+                alt={translate("global_insights")}
                 width={22}
                 height={22}
                 className="audiohub-nav-icon"
@@ -163,12 +163,12 @@ export function AppShell({
               type="button"
               className="audiohub-icon-btn"
               onClick={onProfile}
-              aria-label="Profile"
-              title="Profile"
+              aria-label={translate("profile_nav")}
+              title={translate("profile_nav")}
             >
               <Image
                 src="/avatar.svg"
-                alt="Profile"
+                alt={translate("profile_nav")}
                 width={22}
                 height={22}
                 className="audiohub-nav-icon"
@@ -179,7 +179,7 @@ export function AppShell({
         <div className="audiohub-toolbar">
           <div className="audiohub-toolbar-left">
             {/* Language selector. Current setup is page-controlled, so each page must pass language state correctly. */}
-            <div className="audiohub-language-toggle" role="group" aria-label="Language toggle">
+            <div className="audiohub-language-toggle" role="group" aria-label={translate("language_toggle")}>
               <button
                 type="button"
                 className={`audiohub-language-option ${language === "ENG" ? "active" : ""}`}
@@ -230,7 +230,7 @@ export function AppShell({
                onClick={onLogout}
                disabled={loggingOut}
              >
-               {loggingOut ? "Logging Out..." : translate("logout")}
+               {loggingOut ? translate("logging_out") : translate("logout")}
              </button>
           </div>
         </div>

@@ -132,28 +132,34 @@ function buildTrackModalData(metrics: Metrics) {
 }
 
 // Builds day/night listening split data for charts.
-function buildDayNightChartData(metrics: Metrics) {
+function buildDayNightChartData(
+  metrics: Metrics,
+  translate: (key: TranslationKey) => string
+) {
   return [
     {
-      name: "Day",
+      name: translate("day"),
       value: msToHours(metrics.day_ms ?? 0),
     },
     {
-      name: "Night",
+      name: translate("night"),
       value: msToHours(metrics.night_ms ?? 0),
     },
   ];
 }
 
 // Builds week/weekend listening split data for charts.
-function buildWeekWeekendChartData(metrics: Metrics) {
+function buildWeekWeekendChartData(
+  metrics: Metrics,
+  translate: (key: TranslationKey) => string
+) {
   return [
     {
-      name: "Weekday",
+      name: translate("weekday"),
       value: msToHours(metrics.weekday_ms ?? 0),
     },
     {
-      name: "Weekend",
+      name: translate("weekend"),
       value: msToHours(metrics.weekend_ms ?? 0),
     },
   ];
@@ -177,11 +183,14 @@ function hoursFromMs(ms: number) {
 }
 
 // Converts total listening hours into a simple listener category.
-function listenerArchetype(hours: number) {
-  if (hours < 500) return "Novice Listener";
-  if (hours < 2500) return "Music Guru";
-  if (hours < 5000) return "DJ";
-  return "Expert";
+function listenerArchetype(
+  hours: number,
+  translate: (key: TranslationKey) => string
+) {
+  if (hours < 500) return translate("novice_listener");
+  if (hours < 2500) return translate("music_guru");
+  if (hours < 5000) return translate("dj");
+  return translate("expert");
 }
 
 function lineWidths() {
@@ -519,20 +528,20 @@ export default function DashboardPage() {
   );
 
   const dayNightChartData = useMemo(
-    () => (metrics ? buildDayNightChartData(metrics) : []),
-    [metrics]
+    () => (metrics ? buildDayNightChartData(metrics, translate) : []),
+    [metrics, translate]
   );
 
   const weekWeekendChartData = useMemo(
-    () => (metrics ? buildWeekWeekendChartData(metrics) : []),
-    [metrics]
+    () => (metrics ? buildWeekWeekendChartData(metrics, translate) : []),
+    [metrics, translate]
   );
   const replayChartData = useMemo(
       () => (metrics ? buildReplayData(metrics) : []),
       [metrics]
   );
 
-  const archetype = listenerArchetype(totalHours);
+  const archetype = listenerArchetype(totalHours, translate);
   const dn = {
     day: msToHours(metrics?.day_ms ?? 0),
     night: msToHours(metrics?.night_ms ?? 0),
@@ -617,7 +626,7 @@ export default function DashboardPage() {
                         <XAxis axisLine={false} tickLine={false} tick={false} />
                         <YAxis tick={{ fill: "#f5f5f5", fontSize: 11 }} />
                             <Tooltip
-                              formatter={(value, _name, props) => [`${value} ${translate("hours")}`, props.payload?.name ?? "Artist"]}
+                              formatter={(value, _name, props) => [`${value} ${translate("hours")}`, props.payload?.name ?? translate("artist_label")]}
                               labelFormatter={() => ""}
                               contentStyle={{
                                 background: "#0d0d0f",
@@ -659,7 +668,7 @@ export default function DashboardPage() {
                           ))}
                         </Pie>
                             <Tooltip
-                              formatter={(value, _name, props) => [`${value} ${translate("hours")}`, props.payload?.name ?? "Artist"]}
+                              formatter={(value, _name, props) => [`${value} ${translate("hours")}`, props.payload?.name ?? translate("artist_label")]}
                               labelFormatter={() => ""}
                               contentStyle={{
                                 background: "#0d0d0f",
@@ -735,7 +744,7 @@ export default function DashboardPage() {
                         <Tooltip
                           formatter={(value, _name, props) => [
                             `${value} ${translate("replays")}`,
-                            props.payload?.name ?? "Track",
+                            props.payload?.name ?? translate("track_label"),
                           ]}
                           labelFormatter={() => ""}
                           contentStyle={{
@@ -887,7 +896,7 @@ export default function DashboardPage() {
                     <div className="audiohub-vs-box">
                       <div className="audiohub-vs-value">{dn.day} {translate("hours")}</div>
                     </div>
-                    <div className="audiohub-vs-mid">vs</div>
+                    <div className="audiohub-vs-mid">{translate("versus")}</div>
                     <div className="audiohub-vs-box">
                       <div className="audiohub-vs-value">{dn.night} {translate("hours")}</div>
                     </div>
@@ -965,7 +974,7 @@ export default function DashboardPage() {
                     <div className="audiohub-vs-box">
                       <div className="audiohub-vs-value">{ww.weekend} {translate("hours")}</div>
                     </div>
-                    <div className="audiohub-vs-mid">vs</div>
+                    <div className="audiohub-vs-mid">{translate("versus")}</div>
                     <div className="audiohub-vs-box">
                       <div className="audiohub-vs-value">{ww.week} {translate("hours")}</div>
                     </div>
@@ -990,14 +999,14 @@ export default function DashboardPage() {
             <div className="audiohub-report-card">
               <div className="audiohub-report-key">{translate("top_artist")}</div>
               <div className="audiohub-report-value">
-                {metrics.top_artist || "Unknown Artist"}
+                {metrics.top_artist || translate("unknown_artist")}
               </div>
             </div>
 
             <div className="audiohub-report-card">
               <div className="audiohub-report-key">{translate("top_song")}</div>
               <div className="audiohub-report-value">
-                {metrics.top_track || "Unknown Track"}
+                {metrics.top_track || translate("unknown_track")}
               </div>
             </div>
 
@@ -1018,14 +1027,14 @@ export default function DashboardPage() {
             <div className="audiohub-report-card">
               <div className="audiohub-report-key">{translate("day_night")}</div>
               <div className="audiohub-report-value">
-                {dn.day} vs. {dn.night}
+                {dn.day} {translate("versus")} {dn.night}
               </div>
             </div>
 
             <div className="audiohub-report-card">
               <div className="audiohub-report-key">{translate("weekend_week")}</div>
               <div className="audiohub-report-value">
-                {ww.week} vs. {ww.weekend}
+                {ww.week} {translate("versus")} {ww.weekend}
               </div>
             </div>
           </div>
@@ -1056,7 +1065,7 @@ export default function DashboardPage() {
             <div className="audiohub-compare-block">
               <div>
                 {translate("comparisons_line2_part1")}{" "}
-                <span className="audiohub-compare-value">{metrics.top_artist || "your top artist"}</span>{" "}
+                <span className="audiohub-compare-value">{metrics.top_artist || translate("your_top_artist")}</span>{" "}
                 {translate("comparisons_line2_part2")}{" "}
                 <span className="audiohub-compare-value">{artistDelta}</span>
                 {translate("comparisons_line2_part3")}{" "}
@@ -1097,7 +1106,7 @@ export default function DashboardPage() {
                     <XAxis axisLine={false} tickLine={false} tick={false} />
                     <YAxis tick={{ fill: "#f5f5f5", fontSize: 11 }} />
                       <Tooltip
-                        formatter={(value, _name, props) => [`${value} ${translate("hours")}`, props.payload?.name ?? "Artist"]}
+                        formatter={(value, _name, props) => [`${value} ${translate("hours")}`, props.payload?.name ?? translate("artist_label")]}
                         labelFormatter={() => ""}
                         contentStyle={{
                           background: "#0d0d0f",
@@ -1176,8 +1185,8 @@ export default function DashboardPage() {
                         />
                         <Tooltip
                           formatter={(value, _name, props) => [
-                            `${value} replays`,
-                            props.payload?.name ?? "Track",
+                            `${value} ${translate("replays")}`,
+                            props.payload?.name ?? translate("track_label"),
                           ]}
                           labelFormatter={() => ""}
                           contentStyle={{
@@ -1260,7 +1269,7 @@ export default function DashboardPage() {
         <Modal title={translate("previous_snapshots")} onClose={() => setModal(null)} closeLabel={translate("exit")}>
           <div>
             {snapshots.length === 0 ? (
-              <div style={{ fontSize: 14 }}>No snapshots found.</div>
+              <div style={{ fontSize: 14 }}>{translate("no_snapshots_found")}</div>
             ) : (
               snapshots.map((snapshot) => (
                 <div key={snapshot.id} className="audiohub-snapshot-item">
@@ -1325,14 +1334,14 @@ export default function DashboardPage() {
                     <div className="audiohub-report-card">
                       <div className="audiohub-report-key">{translate("top_artist")}</div>
                       <div className="audiohub-report-value">
-                        {compareData.current?.top_artist || "Unknown Artist"}
+                        {compareData.current?.top_artist || translate("unknown_artist")}
                       </div>
                     </div>
 
                     <div className="audiohub-report-card">
                       <div className="audiohub-report-key">{translate("top_track")}</div>
                       <div className="audiohub-report-value">
-                        {compareData.current?.top_track || "Unknown Track"}
+                        {compareData.current?.top_track || translate("unknown_track")}
                       </div>
                     </div>
 
@@ -1372,14 +1381,14 @@ export default function DashboardPage() {
                     <div className="audiohub-report-card">
                       <div className="audiohub-report-key">{translate("top_artist")}</div>
                       <div className="audiohub-report-value">
-                        {compareData.previous?.top_artist || "Unknown Artist"}
+                        {compareData.previous?.top_artist || translate("unknown_artist")}
                       </div>
                     </div>
 
                     <div className="audiohub-report-card">
                       <div className="audiohub-report-key">{translate("top_track")}</div>
                       <div className="audiohub-report-value">
-                        {compareData.previous?.top_track || "Unknown Track"}
+                        {compareData.previous?.top_track || translate("unknown_track")}
                       </div>
                     </div>
 
@@ -1452,14 +1461,14 @@ export default function DashboardPage() {
                   <div className="audiohub-report-card">
                     <div className="audiohub-report-key">{translate("top_art_chng")}</div>
                     <div className="audiohub-report-value">
-                      {compareData.current?.top_artist === compareData.previous?.top_artist ? "No" : translate("yes")}
+                      {compareData.current?.top_artist === compareData.previous?.top_artist ? translate("no") : translate("yes")}
                     </div>
                   </div>
 
                   <div className="audiohub-report-card">
                     <div className="audiohub-report-key">{translate("top_trk_chng")}</div>
                     <div className="audiohub-report-value">
-                      {compareData.current?.top_track === compareData.previous?.top_track ? "No" : translate("yes")}
+                      {compareData.current?.top_track === compareData.previous?.top_track ? translate("no") : translate("yes")}
                     </div>
                   </div>
                 </div>
