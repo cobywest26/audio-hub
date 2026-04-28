@@ -51,6 +51,29 @@ class FakeSupabase:
     def table(self, name: str):
         return self.tables[name]
 
+#Added tests for...   
+class ParseEndTimeTests(unittest.TestCase):
+    def test_parse_end_time_accepts_zulu_timestamp(self) -> None:
+        parsed = metrics.parse_end_time("2024-06-10T11:12:13Z")
+
+        self.assertIsNotNone(parsed)
+        self.assertEqual(parsed.hour, 11)
+
+    def test_parse_end_time_accepts_iso_timezone_offset(self) -> None:
+        parsed = metrics.parse_end_time("2024-06-10T11:12:13+00:00")
+
+        self.assertIsNotNone(parsed)
+        self.assertEqual(parsed.hour, 11)
+
+    def test_parse_end_time_accepts_iso_timezone_offset_with_fractional_seconds(self) -> None:
+        parsed = metrics.parse_end_time("2024-06-10T11:12:13.123+00:00")
+
+        self.assertIsNotNone(parsed)
+        self.assertEqual(parsed.hour, 11)
+
+    def test_parse_end_time_returns_none_for_invalid_value(self) -> None:
+        self.assertIsNone(metrics.parse_end_time("not-a-date"))
+
 
 class ComputeMetricsTests(unittest.TestCase):
     def test_compute_metrics_returns_expected_rollups(self) -> None:
@@ -71,6 +94,90 @@ class ComputeMetricsTests(unittest.TestCase):
         self.assertEqual(summary["unique_artists"], 2)
         self.assertEqual(summary["top_track"], "Song A")
         self.assertEqual(summary["top_artist"], "Artist X")
+
+    def test_compute_metrics_splits_day_night_and_weekday_weekend(self) -> None:
+        rows = [
+            {
+                "ms_played": 1000,
+                "track_name": "Weekday Day",
+                "artist_name": "Artist A",
+                "played_at": "2024-06-10T11:00:00+00:00",
+            },
+            {
+                "ms_played": 2000,
+                "track_name": "Weekday Night",
+                "artist_name": "Artist B",
+                "played_at": "2024-06-10T21:00:00+00:00",
+            },
+            {
+                "ms_played": 3000,
+                "track_name": "Weekend Day",
+                "artist_name": "Artist C",
+                "played_at": "2024-06-15T12:00:00+00:00",
+            },
+            {
+                "ms_played": 4000,
+                "track_name": "Weekend Night",
+                "artist_name": "Artist D",
+                "played_at": "2024-06-16T02:00:00+00:00",
+            },
+        ]
+
+        summary = metrics.compute_metrics(rows, user_id="u1", snapshot_id="s1")
+
+        self.assertEqual(summary["day_ms"], 4000)
+        self.assertEqual(summary["night_ms"], 6000)
+        self.assertEqual(summary["weekday_ms"], 3000)
+        self.assertEqual(summary["weekend_ms"], 7000)
+
+
+class ComputeGlobalMetricsTests(unittest.TestCase):
+    def test_compute_global_metrics_splits_day_night_and_weekday_weekend(self) -> None:
+        rows = [
+            {
+                "ms_played": 1000,
+                "track_name": "Weekday Day",
+                "artist_name": "Artist A",
+                "spotify_track_uri": "spotify:track:1",
+                "played_at": "2024-06-10T11:00:00+00:00",
+            },
+            {
+                "ms_played": 2000,
+                "track_name": "Weekday Night",
+                "artist_name": "Artist B",
+                "spotify_track_uri": "spotify:track:2",
+                "played_at": "2024-06-10T21:00:00+00:00",
+            },
+            {
+                "ms_played": 3000,
+                "track_name": "Weekend Day",
+                "artist_name": "Artist C",
+                "spotify_track_uri": "spotify:track:3",
+                "played_at": "2024-06-15T12:00:00+00:00",
+            },
+            {
+                "ms_played": 4000,
+                "track_name": "Weekend Night",
+                "artist_name": "Artist D",
+                "spotify_track_uri": "spotify:track:4",
+                "played_at": "2024-06-16T02:00:00+00:00",
+            },
+        ]
+
+        with (
+            mock.patch.object(
+                metrics,
+                "get_latest_snapshots_per_user",
+                return_value=[{"id": "s1", "user_id": "u1"}],
+            ),
+            mock.patch.object(metrics, "fetch_global_history_rows", return_value=rows),
+        ):
+            summary = metrics.compute_global_metrics()
+
+        self.assertEqual(summary["day_ms"], 4000)
+        self.assertEqual(summary["night_ms"], 6000)
+        self.assertEqual(summary["weekday_ms"], 3000)
+        self.assertEqual(summary["weekend_ms"], 7000)
 
 
 class FetchMetricRowsTests(unittest.TestCase):
@@ -124,7 +231,7 @@ class SaveMetricsTests(unittest.TestCase):
 
     def test_compute_and_save_user_metrics_upserts_user_metric_without_snapshot_id(self) -> None:
         upsert_query = UpsertQuery()
-        fake_supabase = FakeSupabase({"user_metric": upsert_query})
+        fake_supabase = FakeSupabase({"user_metrics": upsert_query})
         rows = [{"ms_played": 1000, "track_name": "Song A", "artist_name": "Artist A"}]
 
         with (

@@ -21,8 +21,12 @@ def parse_end_time(value: str | None) -> datetime | None:
             return datetime.strptime(value, fmt)
         except ValueError:
             continue
-
-    return None
+    
+    #
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
 
 
 def compute_metrics(rows: list[dict], user_id: str, snapshot_id: str | None) -> dict:
@@ -231,7 +235,7 @@ def fetch_global_history_rows(snapshot_ids: list[str], page_size: int = 1000) ->
     while True:
         page = (
             supabase.table("listening_history")
-            .select("ms_played,track_name,artist_name,spotify_track_uri")
+            .select("ms_played,track_name,artist_name,spotify_track_uri,played_at")
             .in_("snapshot_id", snapshot_ids)
             .range(start, start + page_size - 1)
             .execute()
@@ -258,6 +262,10 @@ def empty_global_metrics() -> dict:
         "total_active_users": 0,
         "top_tracks": [],
         "top_artists": [],
+        "day_ms": 0,
+        "night_ms": 0,
+        "weekday_ms": 0,
+        "weekend_ms": 0,
     }
 
 
@@ -294,11 +302,17 @@ def compute_global_metrics() -> dict:
     artist_counter: Counter[str] = Counter()
 
     track_labels: dict[str, str] = {}
+    
+    day_ms = 0
+    night_ms = 0
+    weekday_ms = 0
+    weekend_ms = 0
 
     for row in rows:
         track_name = (row.get("track_name") or "").strip()
         artist_name = (row.get("artist_name") or "").strip()
         track_uri = (row.get("spotify_track_uri") or "").strip()
+        ms_played = row.get("ms_played", 0) or 0
 
         if artist_name:
             unique_artists.add(artist_name)
@@ -318,6 +332,21 @@ def compute_global_metrics() -> dict:
                     track_labels[track_key] = track_name
                 else:
                     track_labels[track_key] = "Unknown Track"
+        #
+        end_time = parse_end_time(row.get("played_at"))
+        if end_time:
+            hour = end_time.hour
+            weekday = end_time.weekday()
+
+            if 8 <= hour < 20:
+                day_ms += ms_played
+            else:
+                night_ms += ms_played
+
+            if weekday < 5:
+                weekday_ms += ms_played
+            else:
+                weekend_ms += ms_played
 
     top_track_key = track_counter.most_common(1)[0][0] if track_counter else None
     top_artist_name = artist_counter.most_common(1)[0][0] if artist_counter else None
@@ -337,7 +366,7 @@ def compute_global_metrics() -> dict:
         }
         for artist_name, count in artist_counter.most_common(10)
     ]
-
+    #Added fields for tracking daytime, nighttime, weekday, and weekend listening time
     return {
         "total_streams": total_streams,
         "total_ms_played": total_ms_played,
@@ -348,4 +377,8 @@ def compute_global_metrics() -> dict:
         "total_active_users": total_active_users,
         "top_tracks": top_tracks,
         "top_artists": top_artists,
+        "day_ms": day_ms,
+        "night_ms": night_ms,
+        "weekday_ms": weekday_ms,
+        "weekend_ms": weekend_ms,
     }

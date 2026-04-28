@@ -216,18 +216,6 @@ function listenerArchetype(hours: number) {
   return "Expert";
 }
 
-function dayNight(hours: number) {
-  const day = Math.round(hours * 0.63);
-  const night = Math.max(1, hours - day);
-  return { day, night };
-}
-
-function weekWeekend(hours: number) {
-  const week = Math.round(hours * 0.72);
-  const weekend = Math.max(1, hours - week);
-  return { week, weekend };
-}
-
 function lineWidths() {
   return ["long", "mid", "short", "long", "mid", "long", "short"] as const;
 }
@@ -508,13 +496,13 @@ export default function DashboardPage() {
 
   const archetype = listenerArchetype(totalHours);
   const dn = {
-    day: msToHours(metrics?.day_ms ?? 0) || dayNight(totalHours).day,
-    night: msToHours(metrics?.night_ms ?? 0) || dayNight(totalHours).night,
+    day: msToHours(metrics?.day_ms ?? 0),
+    night: msToHours(metrics?.night_ms ?? 0),
   };
 
   const ww = {
-    week: msToHours(metrics?.weekday_ms ?? 0) || weekWeekend(totalHours).week,
-    weekend: msToHours(metrics?.weekend_ms ?? 0) || weekWeekend(totalHours).weekend,
+    week: msToHours(metrics?.weekday_ms ?? 0),
+    weekend: msToHours(metrics?.weekend_ms ?? 0),
   };
   const comparePercent = Math.min(98, Math.max(51, Math.round(totalHours / 18)));
   const artistDelta = metrics

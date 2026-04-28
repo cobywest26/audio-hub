@@ -108,10 +108,13 @@ def insert_history_batch(rows: list[dict]) -> None:
 
 # Helper for deleting old listening history for a user whenuploading new data
 def delete_old_history(user_id: str, keep_snapshot_id: str) -> None:
-    {
+    (
         supabase.table("listening_history")
-        .delete().eq("user_id", user_id).neq("snapshot_id", keep_snapshot_id).execute()
-    }
+        .delete()
+        .eq("user_id", user_id)
+        .neq("snapshot_id", keep_snapshot_id)
+        .execute()
+    )
 
 # API POST for Spotify data uploads
 @router.post("/", response_model=UploadResponse)

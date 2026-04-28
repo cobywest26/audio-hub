@@ -7,7 +7,7 @@ from io import BytesIO
 os.environ.setdefault("SUPABASE_URL", "https://example.supabase.co")
 os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
 
-from app.routers.upload import deduplicate_rows, load_json_records
+from app.routers.upload import deduplicate_rows, delete_old_history, load_json_records
 
 
 class LoadJsonRecordsTests(unittest.TestCase):
@@ -60,6 +60,61 @@ class DeduplicateRowsTests(unittest.TestCase):
 
         self.assertEqual(duplicate_count, 1)
         self.assertEqual(deduped, [row_a, row_c])
+
+
+class DeleteOldHistoryTests(unittest.TestCase):
+    def test_delete_old_history_executes_delete_query(self) -> None:
+        class FakeResponse:
+            __hash__ = None
+
+        class FakeQuery:
+            def __init__(self) -> None:
+                self.calls: list[tuple] = []
+
+            def delete(self):
+                self.calls.append(("delete",))
+                return self
+
+            def eq(self, column: str, value: str):
+                self.calls.append(("eq", column, value))
+                return self
+
+            def neq(self, column: str, value: str):
+                self.calls.append(("neq", column, value))
+                return self
+
+            def execute(self):
+                self.calls.append(("execute",))
+                return FakeResponse()
+
+        class FakeSupabase:
+            def __init__(self) -> None:
+                self.query = FakeQuery()
+
+            def table(self, table_name: str):
+                self.query.calls.append(("table", table_name))
+                return self.query
+
+        import app.routers.upload as upload_module
+
+        original_supabase = upload_module.supabase
+        fake_supabase = FakeSupabase()
+        upload_module.supabase = fake_supabase
+        try:
+            delete_old_history("user-1", "snapshot-1")
+        finally:
+            upload_module.supabase = original_supabase
+
+        self.assertEqual(
+            fake_supabase.query.calls,
+            [
+                ("table", "listening_history"),
+                ("delete",),
+                ("eq", "user_id", "user-1"),
+                ("neq", "snapshot_id", "snapshot-1"),
+                ("execute",),
+            ],
+        )
 
 
 if __name__ == "__main__":
