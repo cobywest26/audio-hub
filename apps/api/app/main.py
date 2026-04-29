@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import health, upload, metrics
+from app.routers import health, upload, metrics,recommender, profiles
 
 app = FastAPI(title="AudioHub API")
 
@@ -14,4 +14,6 @@ app.add_middleware(
 
 app.include_router(upload.router)
 app.include_router(metrics.router)
+app.include_router(recommender.router)
+app.include_router(profiles.router)
 app.include_router(health.router)

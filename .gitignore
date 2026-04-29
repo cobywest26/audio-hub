@@ -5,11 +5,24 @@ node_modules/
 # Python
 .venv/
 *venv/
+.venv*
 __pycache__/
 
-# Environment variables
-.env
-.env.local
+# Environment files (ignore all except example envs)
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+
+# Datasets
+*.csv
+
+# Ignore all markdown files except for the readme
+*.md
+!README.md
 
 # Supabase temp files
 supabase/.temp/
+
+# Misc.
+.codex

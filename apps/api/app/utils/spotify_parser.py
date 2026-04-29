@@ -12,10 +12,11 @@ def parse_spotify_timestamp(ts: str | None) -> str | None:
         return None
 
 
-def parse_spotify_entry(entry: dict[str, Any], user_id: str, upload_id: str) -> dict[str, Any]:
+def parse_spotify_entry(entry: dict[str, Any], user_id: str, upload_id: str, snapshot_id:str) -> dict[str, Any]:
     return {
         "user_id": user_id,
         "upload_id": upload_id,
+        "snapshot_id": snapshot_id,
         "played_at": parse_spotify_timestamp(entry.get("ts")),
         "track_name": entry.get("master_metadata_track_name"),
         "artist_name": entry.get("master_metadata_album_artist_name"),
