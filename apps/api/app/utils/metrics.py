@@ -186,8 +186,7 @@ def compute_and_save_snapshot_metrics(user_id: str, snapshot_id: str) -> dict:
     return metrics
 
 
-def compute_and_save_user_metrics(user_id: str) -> dict:
-    rows = fetch_user_metric_rows(user_id)
+def save_user_metrics(user_id: str, rows: list[dict]) -> dict:
     metrics = compute_metrics(rows, user_id, snapshot_id=None)
     metrics.pop("snapshot_id", None)
 
@@ -196,6 +195,16 @@ def compute_and_save_user_metrics(user_id: str) -> dict:
         on_conflict="user_id",
     ).execute()
     return metrics
+
+
+def compute_and_save_user_metrics(user_id: str) -> dict:
+    rows = fetch_user_metric_rows(user_id)
+    return save_user_metrics(user_id, rows)
+
+
+def compute_and_save_user_metrics_from_snapshot(user_id: str, snapshot_id: str) -> dict:
+    rows = fetch_snapshot_metric_rows(user_id, snapshot_id)
+    return save_user_metrics(user_id, rows)
 
 
 def get_latest_snapshots_per_user(page_size: int = 1000) -> list[dict]:

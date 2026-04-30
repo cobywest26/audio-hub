@@ -7,7 +7,12 @@ from io import BytesIO
 os.environ.setdefault("SUPABASE_URL", "https://example.supabase.co")
 os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
 
-from app.routers.upload import deduplicate_rows, delete_old_history, load_json_records
+from app.routers.upload import (
+    deactivate_old_snapshots,
+    deduplicate_rows,
+    delete_old_history,
+    load_json_records,
+)
 
 
 class LoadJsonRecordsTests(unittest.TestCase):
@@ -63,37 +68,51 @@ class DeduplicateRowsTests(unittest.TestCase):
 
 
 class DeleteOldHistoryTests(unittest.TestCase):
-    def test_delete_old_history_executes_delete_query(self) -> None:
+    def test_delete_old_history_deletes_each_old_snapshot_individually(self) -> None:
         class FakeResponse:
-            __hash__ = None
+            def __init__(self, data=None) -> None:
+                self.data = data
 
         class FakeQuery:
-            def __init__(self) -> None:
-                self.calls: list[tuple] = []
+            def __init__(self, table_name: str, calls: list[tuple]) -> None:
+                self.table_name = table_name
+                self.calls = calls
+
+            def select(self, columns: str):
+                self.calls.append(("select", self.table_name, columns))
+                return self
+
+            def update(self, payload: dict):
+                self.calls.append(("update", self.table_name, payload))
+                return self
 
             def delete(self):
-                self.calls.append(("delete",))
+                self.calls.append(("delete", self.table_name))
                 return self
 
             def eq(self, column: str, value: str):
-                self.calls.append(("eq", column, value))
+                self.calls.append(("eq", self.table_name, column, value))
                 return self
 
             def neq(self, column: str, value: str):
-                self.calls.append(("neq", column, value))
+                self.calls.append(("neq", self.table_name, column, value))
                 return self
 
             def execute(self):
-                self.calls.append(("execute",))
+                self.calls.append(("execute", self.table_name))
+                if self.table_name == "snapshots":
+                    return FakeResponse(
+                        data=[{"id": "snapshot-old-1"}, {"id": "snapshot-old-2"}]
+                    )
                 return FakeResponse()
 
         class FakeSupabase:
             def __init__(self) -> None:
-                self.query = FakeQuery()
+                self.calls: list[tuple] = []
 
             def table(self, table_name: str):
-                self.query.calls.append(("table", table_name))
-                return self.query
+                self.calls.append(("table", table_name))
+                return FakeQuery(table_name, self.calls)
 
         import app.routers.upload as upload_module
 
@@ -101,18 +120,84 @@ class DeleteOldHistoryTests(unittest.TestCase):
         fake_supabase = FakeSupabase()
         upload_module.supabase = fake_supabase
         try:
-            delete_old_history("user-1", "snapshot-1")
+            deleted_count = delete_old_history("user-1", "snapshot-1")
+        finally:
+            upload_module.supabase = original_supabase
+
+        self.assertEqual(deleted_count, 2)
+        self.assertEqual(
+            fake_supabase.calls,
+            [
+                ("table", "snapshots"),
+                ("select", "snapshots", "id"),
+                ("eq", "snapshots", "user_id", "user-1"),
+                ("neq", "snapshots", "id", "snapshot-1"),
+                ("execute", "snapshots"),
+                ("table", "listening_history"),
+                ("delete", "listening_history"),
+                ("eq", "listening_history", "user_id", "user-1"),
+                ("eq", "listening_history", "snapshot_id", "snapshot-old-1"),
+                ("execute", "listening_history"),
+                ("table", "listening_history"),
+                ("delete", "listening_history"),
+                ("eq", "listening_history", "user_id", "user-1"),
+                ("eq", "listening_history", "snapshot_id", "snapshot-old-2"),
+                ("execute", "listening_history"),
+            ],
+        )
+
+    def test_deactivate_old_snapshots_updates_other_snapshots(self) -> None:
+        class FakeResponse:
+            def __init__(self, data=None) -> None:
+                self.data = data
+
+        class FakeQuery:
+            def __init__(self, table_name: str, calls: list[tuple]) -> None:
+                self.table_name = table_name
+                self.calls = calls
+
+            def update(self, payload: dict):
+                self.calls.append(("update", self.table_name, payload))
+                return self
+
+            def eq(self, column: str, value: str):
+                self.calls.append(("eq", self.table_name, column, value))
+                return self
+
+            def neq(self, column: str, value: str):
+                self.calls.append(("neq", self.table_name, column, value))
+                return self
+
+            def execute(self):
+                self.calls.append(("execute", self.table_name))
+                return FakeResponse()
+
+        class FakeSupabase:
+            def __init__(self) -> None:
+                self.calls: list[tuple] = []
+
+            def table(self, table_name: str):
+                self.calls.append(("table", table_name))
+                return FakeQuery(table_name, self.calls)
+
+        import app.routers.upload as upload_module
+
+        original_supabase = upload_module.supabase
+        fake_supabase = FakeSupabase()
+        upload_module.supabase = fake_supabase
+        try:
+            deactivate_old_snapshots("user-1", "snapshot-1")
         finally:
             upload_module.supabase = original_supabase
 
         self.assertEqual(
-            fake_supabase.query.calls,
+            fake_supabase.calls,
             [
-                ("table", "listening_history"),
-                ("delete",),
-                ("eq", "user_id", "user-1"),
-                ("neq", "snapshot_id", "snapshot-1"),
-                ("execute",),
+                ("table", "snapshots"),
+                ("update", "snapshots", {"is_active": False}),
+                ("eq", "snapshots", "user_id", "user-1"),
+                ("neq", "snapshots", "id", "snapshot-1"),
+                ("execute", "snapshots"),
             ],
         )
 
