@@ -4,7 +4,7 @@ import zipfile
 import traceback
 from io import BytesIO
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from app.core.auth import get_current_user_id
@@ -13,6 +13,7 @@ from app.utils.metrics import (
     compute_and_save_global_metrics,
     compute_and_save_snapshot_metrics,
     compute_and_save_user_metrics,
+    compute_and_save_user_metrics_from_snapshot,
 )
 from app.utils.spotify_parser import parse_spotify_entry
 
@@ -110,19 +111,126 @@ def insert_history_batch(rows: list[dict]) -> None:
 
     supabase.table("listening_history").insert(rows).execute()
 
-# Helper for deleting old listening history for a user whenuploading new data
-def delete_old_history(user_id: str, keep_snapshot_id: str) -> None:
+def list_old_snapshot_ids(user_id: str, keep_snapshot_id: str) -> list[str]:
+    result = (
+        supabase.table("snapshots")
+        .select("id")
+        .eq("user_id", user_id)
+        .neq("id", keep_snapshot_id)
+        .execute()
+    )
+    return [row["id"] for row in (result.data or []) if row.get("id")]
+
+
+def delete_snapshot_history(user_id: str, snapshot_id: str) -> None:
     (
         supabase.table("listening_history")
         .delete()
         .eq("user_id", user_id)
-        .neq("snapshot_id", keep_snapshot_id)
+        .eq("snapshot_id", snapshot_id)
         .execute()
     )
+
+
+# Delete old listening history one snapshot at a time to avoid a broad neq() delete.
+def delete_old_history(user_id: str, keep_snapshot_id: str) -> int:
+    old_snapshot_ids = list_old_snapshot_ids(user_id, keep_snapshot_id)
+
+    for snapshot_id in old_snapshot_ids:
+        delete_snapshot_history(user_id, snapshot_id)
+
+    return len(old_snapshot_ids)
+
+
+def deactivate_old_snapshots(user_id: str, keep_snapshot_id: str) -> None:
+    (
+        supabase.table("snapshots")
+        .update({"is_active": False})
+        .eq("user_id", user_id)
+        .neq("id", keep_snapshot_id)
+        .execute()
+    )
+
+
+def finalize_successful_upload(
+    upload_id: str,
+    snapshot_id: str,
+    records_imported: int,
+    cleanup_warning: str | None = None,
+) -> None:
+    error_message = cleanup_warning[:1000] if cleanup_warning else None
+    supabase.table("uploads").update({
+        "status": "processed",
+        "records_imported": records_imported,
+        "error_message": error_message,
+    }).eq("id", upload_id).execute()
+
+    supabase.table("snapshots").update({
+        "status": "ready",
+        "is_active": True,
+    }).eq("id", snapshot_id).execute()
+
+
+def run_post_upload_tasks(user_id: str, snapshot_id: str) -> None:
+    cleanup_succeeded = False
+
+    try:
+        deleted_snapshot_count = delete_old_history(user_id, snapshot_id)
+        logger.info(
+            "Deleted listening history for %s older snapshots for user %s, keeping snapshot %s",
+            deleted_snapshot_count,
+            user_id,
+            snapshot_id,
+        )
+        cleanup_succeeded = True
+    except Exception as cleanup_error:
+        logger.exception(
+            "Old listening history cleanup failed for user %s after snapshot %s: %s",
+            user_id,
+            snapshot_id,
+            cleanup_error,
+        )
+
+    try:
+        deactivate_old_snapshots(user_id, snapshot_id)
+    except Exception:
+        logger.exception(
+            "Failed to mark older snapshots inactive for user %s after snapshot %s",
+            user_id,
+            snapshot_id,
+        )
+
+    try:
+        if cleanup_succeeded:
+            compute_and_save_user_metrics(user_id)
+            logger.info("Saved profile metrics for user %s", user_id)
+        else:
+            compute_and_save_user_metrics_from_snapshot(user_id, snapshot_id)
+            logger.info(
+                "Saved profile metrics for user %s from snapshot %s despite cleanup timeout",
+                user_id,
+                snapshot_id,
+            )
+    except Exception:
+        logger.exception(
+            "Profile metric refresh failed for user %s after snapshot %s",
+            user_id,
+            snapshot_id,
+        )
+
+    try:
+        compute_and_save_global_metrics()
+        logger.info("Saved global metrics after snapshot %s", snapshot_id)
+    except Exception:
+        logger.exception(
+            "Global metric refresh failed after snapshot %s",
+            snapshot_id,
+        )
 
 # API POST for Spotify data uploads
 @router.post("/", response_model=UploadResponse)
 async def upload_spotify_file(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     user_id: str = Depends(get_current_user_id),
 ):
@@ -187,41 +295,12 @@ async def upload_spotify_file(
         metrics = compute_and_save_snapshot_metrics(user_id, snapshot_id)
         logger.info("Saved snapshot metrics for snapshot %s", snapshot_id)
 
-        delete_old_history(user_id, snapshot_id)
-        logger.info(
-            "Deleted old listening history for user %s, keeping snapshot %s",
-            user_id,
-            snapshot_id,
+        finalize_successful_upload(
+            upload_id=upload_id,
+            snapshot_id=snapshot_id,
+            records_imported=len(parsed_rows),
         )
-
-        try:
-            compute_and_save_user_metrics(user_id)
-            logger.info("Saved profile metrics for user %s", user_id)
-        except Exception:
-            logger.exception(
-                "Profile metric refresh failed for user %s after snapshot %s",
-                user_id,
-                snapshot_id,
-            )
-
-        supabase.table("uploads").update({
-            "status": "processed",
-            "records_imported": len(parsed_rows),
-            "error_message": None,
-        }).eq("id", upload_id).execute()
-
-        supabase.table("snapshots").update({
-            "status": "ready",
-        }).eq("id", snapshot_id).execute()
-
-        try:
-            compute_and_save_global_metrics()
-            logger.info("Saved global metrics after snapshot %s", snapshot_id)
-        except Exception:
-            logger.exception(
-                "Global metric refresh failed after snapshot %s",
-                snapshot_id,
-            )
+        background_tasks.add_task(run_post_upload_tasks, user_id, snapshot_id)
 
         return {
             "message": "Upload processed successfully.",

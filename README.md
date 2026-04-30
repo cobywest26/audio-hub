@@ -57,16 +57,10 @@ python -m uvicorn app.main:app --reload
 And look to http://localhost:8000
 with API docs at http://localhost:8000/docs
 
-## Supabase Local Development Setup
-Supabase is started automatically with the frontend run script
-```bash
-npm run dev
-```
-This launches the local DB auth and storage services for dev work. If needed you can also control it manually from the project root with
-```bash
-npm run supabase:start
-npm run supabase:stop
-```
+## Environment Setup
+There are .env.example files in the /apps/api/ and /apps/web/ folders that show the necessary structure for .env files
+that must be present in their given directories. These are necessary for the application to run, and can be retrieved by
+contacting one of the developers.
 
 ## Dev Workflow
 During dev, you will run
